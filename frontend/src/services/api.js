@@ -80,6 +80,17 @@ export const apiService = {
       return null;
     }
   },
+
+  // Chatbot functions
+  sendChatMessage: async (message, context = {}) => {
+    const response = await api.post('/chatbot/chat', { message, context });
+    return response.data;
+  },
+
+  getContextualHelp: async (context = {}) => {
+    const response = await api.post('/chatbot/help', { context });
+    return response.data;
+  },
 };
 
 export default api;

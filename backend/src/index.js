@@ -6,6 +6,7 @@ import compression from 'compression';
 import cron from 'node-cron';
 import districtRoutes from './routes/districts.js';
 import statsRoutes from './routes/stats.js';
+import chatbotRoutes from './routes/chatbot.js';
 import { syncDataJob } from './jobs/syncData.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { rateLimiter } from './middleware/rateLimiter.js';
@@ -31,6 +32,7 @@ app.get('/health', (req, res) => {
 // Routes
 app.use('/api/districts', districtRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/chatbot', chatbotRoutes);
 
 // Error handling
 app.use(errorHandler);

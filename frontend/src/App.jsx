@@ -6,6 +6,7 @@ import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import Compare from './pages/Compare';
 import About from './pages/About';
+import Chatbot from './components/Chatbot';
 import './App.css';
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
             </Routes>
           </main>
           <Footer />
+          <Chatbot />
         </div>
       </Router>
     </AppProvider>

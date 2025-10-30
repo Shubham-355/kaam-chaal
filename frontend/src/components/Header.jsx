@@ -2,10 +2,21 @@ import { Link, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { Home, MapPin, GitCompare, Info, Globe } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
 
 const Header = () => {
   const { language, setLanguage, selectedDistrict } = useApp();
   const location = useLocation();
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const toggleLanguage = () => {
     setLanguage(language === 'en' ? 'hi' : 'en');
@@ -58,7 +69,9 @@ const Header = () => {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 px-4 pt-4">
-      <nav className="max-w-7xl mx-auto bg-white/80 backdrop-blur-lg border border-gray-200/50 rounded-2xl shadow-lg">
+      <nav className={`mx-auto bg-white/50 backdrop-blur-lg border border-gray-200/50 rounded-2xl shadow-lg transition-all duration-300 ${
+        isScrolled ? 'max-w-4xl' : 'max-w-6xl'
+      }`}>
         <div className="px-6 py-4">
           <div className="flex items-center justify-between gap-4">
             {/* Logo/Brand */}

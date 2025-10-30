@@ -312,7 +312,7 @@ const Home = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 1.2 }}
-            className="relative z-10 mt-20 rounded-3xl border-2 border-orange-200 bg-white/80 backdrop-blur-md p-8 shadow-xl"
+            className="relative z-10 mt-20 rounded-3xl border-2 border-orange-200 bg-white/80 backdrop-blur-md p-8 mx-10 shadow-xl"
           >
             <div className="w-full">
               {error && <ErrorMessage message={error} onRetry={retryFetchStates} />}
@@ -320,20 +320,29 @@ const Home = () => {
               {/* State Selection */}
               <div className="space-y-6">
                 <div>
-                  <label className="block text-lg font-semibold text-gray-700 mb-3">
-                    {t.selectState}
-                  </label>
                   <div className="relative">
-                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none z-10" />
                     <select
                       value={selectedState}
                       onChange={(e) => setSelectedState(e.target.value)}
-                      className="w-full pl-12 pr-4 py-4 text-lg border-2 border-gray-300 rounded-xl focus:border-orange-500 focus:outline-none appearance-none bg-white cursor-pointer transition-all"
+                      className="w-full pl-12 pr-8 py-2 text-lg border-2 border-gray-300 rounded-xl focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200 appearance-none bg-white cursor-pointer transition-all hover:border-gray-400 font-medium text-gray-700"
                       disabled={loading}
+                      style={{
+                        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23f97316'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'right 1rem center',
+                        backgroundSize: '1.5rem'
+                      }}
                     >
-                      <option value="">{language === 'en' ? 'Choose a state...' : 'एक राज्य चुनें...'}</option>
+                      <option value="" className="text-gray-500">
+                        {language === 'en' ? 'Choose a state...' : 'एक राज्य चुनें...'}
+                      </option>
                       {states.map((state) => (
-                        <option key={state.stateCode || state.stateName} value={state.stateName}>
+                        <option 
+                          key={state.stateCode || state.stateName} 
+                          value={state.stateName}
+                          className="py-2 text-gray-800"
+                        >
                           {state.stateName}
                         </option>
                       ))}
@@ -354,16 +363,21 @@ const Home = () => {
                     {loading ? (
                       <LoadingSpinner message={language === 'en' ? 'Loading districts...' : 'जिले लोड हो रहे हैं...'} size="small" />
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto p-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto p-2 bg-gray-50 rounded-xl border border-gray-200">
                         {districts.map((district) => (
                           <motion.button
                             key={district.districtCode}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => handleDistrictSelect(district)}
-                            className="text-left p-4 border-2 border-gray-200 rounded-xl hover:border-orange-500 hover:bg-orange-50 transition-all font-medium"
+                            className="text-left p-4 border-2 border-gray-200 rounded-xl hover:border-orange-500 hover:bg-orange-50 transition-all font-medium text-gray-800 bg-white hover:shadow-sm"
                           >
-                            {district.districtName}
+                            <div className="flex items-center justify-between">
+                              <span>{district.districtName}</span>
+                              <svg className="w-4 h-4 text-orange-500 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </div>
                           </motion.button>
                         ))}
                       </div>
