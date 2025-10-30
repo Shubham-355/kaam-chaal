@@ -27,8 +27,17 @@ router.get('/:districtCode', async (req, res, next) => {
     const { districtCode } = req.params;
     const { finYear } = req.query;
     
+    // First check if district exists
+    const districtExists = await dataService.getDistrictByCode(districtCode);
+    if (!districtExists) {
+      return res.status(404).json({ 
+        success: false, 
+        error: { message: `District with code ${districtCode} not found` } 
+      });
+    }
+    
     const data = await dataService.getDistrictData(districtCode, finYear);
-    res.json({ success: true, data });
+    res.json({ success: true, data: data || [] });
   } catch (error) {
     next(error);
   }

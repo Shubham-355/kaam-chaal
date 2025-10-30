@@ -11,8 +11,12 @@ class ApiService {
         format: 'json',
         offset,
         limit,
-        'filters[state_name]': state,
       };
+
+      // Only add state filter if state is specified
+      if (state) {
+        params['filters[state_name]'] = state;
+      }
 
       if (finYear) {
         params['filters[fin_year]'] = finYear;

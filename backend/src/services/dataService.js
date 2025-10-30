@@ -142,6 +142,12 @@ class DataService {
     });
     return states;
   }
+
+  async getDistrictByCode(districtCode) {
+    return await prisma.district.findUnique({
+      where: { districtCode },
+    });
+  }
 }
 
 export default new DataService();
