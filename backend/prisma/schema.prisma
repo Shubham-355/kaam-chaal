@@ -13,3 +13,89 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model District {
+  id           String   @id @default(uuid())
+  districtCode String   @unique @map("district_code")
+  districtName String   @map("district_name")
+  stateCode    String   @map("state_code")
+  stateName    String   @map("state_name")
+  records      DistrictRecord[]
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([stateCode])
+  @@index([districtCode])
+  @@map("districts")
+}
+
+model DistrictRecord {
+  id                        String   @id @default(uuid())
+  districtId                String   @map("district_id")
+  district                  District @relation(fields: [districtId], references: [id], onDelete: Cascade)
+  
+  finYear                   String   @map("fin_year")
+  month                     String
+  
+  // Employment Data
+  approvedLabourBudget      BigInt?  @map("approved_labour_budget")
+  avgWageRate               Float?   @map("avg_wage_rate")
+  avgDaysEmployment         Int?     @map("avg_days_employment")
+  totalHouseholdsWorked     BigInt?  @map("total_households_worked")
+  totalIndividualsWorked    BigInt?  @map("total_individuals_worked")
+  totalActiveJobCards       BigInt?  @map("total_active_job_cards")
+  totalActiveWorkers        BigInt?  @map("total_active_workers")
+  totalJobCardsIssued       BigInt?  @map("total_job_cards_issued")
+  totalWorkers              BigInt?  @map("total_workers")
+  hhsCompleted100Days       BigInt?  @map("hhs_completed_100_days")
+  
+  // Category-wise Data
+  scPersondays              BigInt?  @map("sc_persondays")
+  scWorkers                 BigInt?  @map("sc_workers")
+  stPersondays              BigInt?  @map("st_persondays")
+  stWorkers                 BigInt?  @map("st_workers")
+  womenPersondays           BigInt?  @map("women_persondays")
+  differentlyAbledWorked    BigInt?  @map("differently_abled_worked")
+  
+  // Works Data
+  totalWorksCompleted       BigInt?  @map("total_works_completed")
+  totalWorksOngoing         BigInt?  @map("total_works_ongoing")
+  totalWorksTakenup         BigInt?  @map("total_works_takenup")
+  gpsWithNilExp             BigInt?  @map("gps_with_nil_exp")
+  
+  // Financial Data
+  totalExpenditure          Float?   @map("total_expenditure")
+  wages                     Float?   @map("wages")
+  materialWages             Float?   @map("material_wages")
+  adminExpenditure          Float?   @map("admin_expenditure")
+  persondaysCentralLiability BigInt?  @map("persondays_central_liability")
+  
+  // Performance Metrics
+  percentCategoryBWorks     Int?     @map("percent_category_b_works")
+  percentAgriExpenditure    Float?   @map("percent_agri_expenditure")
+  percentNRMExpenditure     Float?   @map("percent_nrm_expenditure")
+  percentPayments15Days     Float?   @map("percent_payments_15_days")
+  
+  remarks                   String?  @db.Text
+  
+  createdAt                 DateTime @default(now()) @map("created_at")
+  updatedAt                 DateTime @updatedAt @map("updated_at")
+
+  @@unique([districtId, finYear, month])
+  @@index([finYear])
+  @@index([month])
+  @@map("district_records")
+}
+
+model ApiSyncLog {
+  id          String   @id @default(uuid())
+  syncType    String   @map("sync_type") // 'full' | 'incremental'
+  status      String   // 'success' | 'failed' | 'in_progress'
+  recordsAdded Int     @default(0) @map("records_added")
+  recordsUpdated Int   @default(0) @map("records_updated")
+  errorMessage String? @db.Text @map("error_message")
+  startedAt   DateTime @map("started_at")
+  completedAt DateTime? @map("completed_at")
+
+  @@map("api_sync_logs")
+}
