@@ -62,6 +62,17 @@ export const apiService = {
     return response.data;
   },
 
+  // Get aggregated state data
+  getStateAggregateData: async (stateName) => {
+    try {
+      const response = await api.get(`/stats/state/${encodeURIComponent(stateName)}/aggregate`);
+      return response.data;
+    } catch (error) {
+      console.error(`Failed to fetch data for ${stateName}:`, error);
+      return null;
+    }
+  },
+
   // Reverse geocode to get location info (using browser geolocation + external API)
   reverseGeocode: async (lat, lon) => {
     try {
@@ -84,6 +95,7 @@ export const apiService = {
   // Chatbot functions
   sendChatMessage: async (message, context = {}) => {
     const response = await api.post('/chatbot/chat', { message, context });
+    // Response now includes both text and action
     return response.data;
   },
 

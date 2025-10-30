@@ -67,7 +67,7 @@ const Compare = () => {
   const translations = {
     en: {
       title: 'Compare MGNREGA Performance',
-      subtitle: 'Analyze and compare data across districts, states, or years - No limits!',
+      subtitle: '',
       compareDistricts: 'Compare Districts',
       compareStates: 'Compare States',
       compareYears: 'Compare Years',
@@ -691,13 +691,13 @@ const Compare = () => {
               </motion.button>
             ))}
           </div>
-          <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 text-center">
+          {/* <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 text-center">
             <p className="text-sm text-orange-800 font-medium">
               {comparisonMode === 'districts' && t.districtMode}
               {comparisonMode === 'states' && t.stateMode}
               {comparisonMode === 'years' && t.yearMode}
             </p>
-          </div>
+          </div> */}
         </motion.div>
 
         {/* Error & Loading */}

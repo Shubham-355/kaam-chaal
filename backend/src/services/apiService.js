@@ -29,8 +29,8 @@ class ApiService {
 
       return response.data;
     } catch (error) {
-      console.error('API fetch error:', error.message);
-      throw new Error(`Failed to fetch data: ${error.message}`);
+      // Only log error message, not full error object
+      throw new Error(`API error: ${error.message}`);
     }
   }
 

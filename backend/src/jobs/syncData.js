@@ -2,17 +2,20 @@ import prisma from '../config/database.js';
 import apiService from '../services/apiService.js';
 import dataService from '../services/dataService.js';
 
-// Get states and financial years from environment or use defaults
-const getStatesFromEnv = () => {
-  const syncStates = process.env.SYNC_STATES?.trim();
-  if (!syncStates) return null; // null means sync all states
-  return syncStates.split(',').map(s => s.trim()).filter(s => s);
-};
-
+// Get financial years from environment or use defaults
 const getFinYearsFromEnv = () => {
   const finYears = process.env.SYNC_FIN_YEARS?.trim();
   if (!finYears) return ['2024-2025']; // Default to current year
   return finYears.split(',').map(y => y.trim()).filter(y => y);
+};
+
+// Sort years in reverse chronological order
+const sortYearsReverse = (years) => {
+  return years.sort((a, b) => {
+    const yearA = parseInt(a.split('-')[0]);
+    const yearB = parseInt(b.split('-')[0]);
+    return yearB - yearA; // Reverse order (2024-25 first)
+  });
 };
 
 export async function syncDataJob(specificStates = null, specificFinYears = null) {
@@ -29,35 +32,89 @@ export async function syncDataJob(specificStates = null, specificFinYears = null
   });
 
   try {
-    const states = specificStates || getStatesFromEnv();
+    // Get all financial years and sort in reverse order
     const finYears = specificFinYears || getFinYearsFromEnv();
+    const sortedFinYears = sortYearsReverse([...finYears]);
+    
+    console.log(`\n📅 Years: ${sortedFinYears.length} (${sortedFinYears[0]} → ${sortedFinYears[sortedFinYears.length - 1]})`);
 
-    if (!states) {
-      console.log('Syncing data for ALL states...');
-      // Fetch all states by not filtering
-      for (const finYear of finYears) {
-        console.log(`\nFetching data for financial year: ${finYear}`);
-        const records = await apiService.fetchAllPages(null, finYear);
-        console.log(`Fetched ${records.length} records from API`);
-        
-        const { added, updated } = await processRecords(records);
-        totalRecordsAdded += added;
-        totalRecordsUpdated += updated;
-      }
+    // Fetch all unique states from the database or API
+    let allStates = [];
+    
+    if (specificStates && specificStates.length > 0) {
+      allStates = specificStates;
+      console.log(`🌏 States: ${allStates.length} specified`);
     } else {
-      console.log(`Syncing data for states: ${states.join(', ')}`);
-      for (const state of states) {
-        for (const finYear of finYears) {
-          console.log(`\nProcessing ${state} - ${finYear}...`);
-          const records = await apiService.fetchAllPages(state, finYear);
-          console.log(`Fetched ${records.length} records from API`);
-          
-          const { added, updated } = await processRecords(records);
-          totalRecordsAdded += added;
-          totalRecordsUpdated += updated;
-        }
+      console.log('🌏 Fetching all states...');
+      
+      // Get existing states from database
+      const existingStates = await prisma.district.findMany({
+        select: { stateName: true },
+        distinct: ['stateName'],
+        orderBy: { stateName: 'asc' },
+      });
+      
+      if (existingStates.length > 0) {
+        allStates = existingStates.map(s => s.stateName);
+        console.log(`   Found ${allStates.length} states in database`);
+      } else {
+        // If no states in database, fetch from API for the latest year
+        const sampleRecords = await apiService.fetchAllPages(null, sortedFinYears[0]);
+        const stateSet = new Set(sampleRecords.map(r => r.state_name));
+        allStates = Array.from(stateSet).sort();
+        console.log(`   Found ${allStates.length} states from API`);
       }
     }
+
+    console.log(`📊 Total combinations: ${allStates.length * sortedFinYears.length}\n`);
+
+    // Process each year, then all states within that year
+    for (let yearIndex = 0; yearIndex < sortedFinYears.length; yearIndex++) {
+      const finYear = sortedFinYears[yearIndex];
+      
+      console.log(`\n${'='.repeat(60)}`);
+      console.log(`📅 Year ${yearIndex + 1}/${sortedFinYears.length}: ${finYear}`);
+      console.log(`${'='.repeat(60)}`);
+
+      let yearAdded = 0;
+      let yearUpdated = 0;
+
+      // Process all states for this year
+      for (let stateIndex = 0; stateIndex < allStates.length; stateIndex++) {
+        const state = allStates[stateIndex];
+        
+        // Only log every 5th state to reduce clutter
+        if (stateIndex % 5 === 0 || stateIndex === allStates.length - 1) {
+          process.stdout.write(`\r🌍 [${stateIndex + 1}/${allStates.length}] ${state.padEnd(20)} `);
+        }
+        
+        try {
+          const records = await apiService.fetchAllPages(state, finYear);
+          
+          if (records.length > 0) {
+            const { added, updated } = await processRecords(records);
+            totalRecordsAdded += added;
+            totalRecordsUpdated += updated;
+            yearAdded += added;
+            yearUpdated += updated;
+          }
+          
+          // Small delay to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+        } catch (error) {
+          console.error(`\n   ✗ Error: ${state} - ${error.message}`);
+          continue;
+        }
+      }
+      
+      console.log(`\n✓ ${finYear}: +${yearAdded} ~${yearUpdated} (Total: ${totalRecordsAdded}/${totalRecordsUpdated})`);
+    }
+
+    const endTime = new Date();
+    const durationMs = endTime - startTime;
+    const durationMin = Math.floor(durationMs / 60000);
+    const durationSec = Math.floor((durationMs % 60000) / 1000);
 
     await prisma.apiSyncLog.update({
       where: { id: syncLog.id },
@@ -65,13 +122,19 @@ export async function syncDataJob(specificStates = null, specificFinYears = null
         status: 'success',
         recordsAdded: totalRecordsAdded,
         recordsUpdated: totalRecordsUpdated,
-        completedAt: new Date(),
+        completedAt: endTime,
       },
     });
 
-    console.log(`\nSync completed: ${totalRecordsAdded} added, ${totalRecordsUpdated} updated`);
+    console.log(`\n${'='.repeat(60)}`);
+    console.log(`✅ SYNC COMPLETED`);
+    console.log(`${'='.repeat(60)}`);
+    console.log(`📊 Added: ${totalRecordsAdded} | Updated: ${totalRecordsUpdated}`);
+    console.log(`⏱️  Duration: ${durationMin}m ${durationSec}s`);
+    console.log(`${'='.repeat(60)}\n`);
+    
   } catch (error) {
-    console.error('Sync failed:', error);
+    console.error('\n❌ Sync failed:', error.message);
 
     await prisma.apiSyncLog.update({
       where: { id: syncLog.id },
@@ -112,9 +175,11 @@ async function processRecords(records) {
         recordsAdded++;
       }
     } catch (error) {
-      console.error(`Error processing record for district ${record.district_name}: ${error.message}`);
+      // Silent error handling to avoid log spam
+      continue;
     }
   }
 
   return { added: recordsAdded, updated: recordsUpdated };
 }
+

@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { MapPin, Search, TrendingUp, Users, Briefcase, IndianRupee, ArrowRight, Sparkles } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { apiService } from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorMessage from '../components/ErrorMessage';
+import IndiaMap from '../components/IndiaMap';
 
 const Home = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { language, setSelectedDistrict, setUserLocation } = useApp();
   const [states, setStates] = useState([]);
   const [districts, setDistricts] = useState([]);
@@ -16,6 +18,13 @@ const Home = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [detectingLocation, setDetectingLocation] = useState(false);
+  const [chatbotOpen, setChatbotOpen] = useState(false);
+  const [stateSearchTerm, setStateSearchTerm] = useState('');
+  const [showStateDropdown, setShowStateDropdown] = useState(false);
+  const stateDropdownRef = useRef(null);
+  const [districtSearchTerm, setDistrictSearchTerm] = useState('');
+  const [showDistrictDropdown, setShowDistrictDropdown] = useState(false);
+  const districtDropdownRef = useRef(null);
 
   const translations = {
     en: {
@@ -76,6 +85,12 @@ const Home = () => {
         if (isMounted) {
           setStates(response.data || []);
           setError(null);
+          
+          // Check if we have a pre-selected state from navigation
+          if (location.state?.selectedState) {
+            setSelectedState(location.state.selectedState);
+            setStateSearchTerm(location.state.selectedState);
+          }
         }
       } catch (err) {
         if (isMounted) {
@@ -93,7 +108,7 @@ const Home = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [location.state]);
 
   useEffect(() => {
     let isMounted = true;
@@ -235,6 +250,76 @@ const Home = () => {
     { icon: TrendingUp, title: t.feature4Title, description: t.feature4Desc, color: 'purple' },
   ];
 
+  // Add new data for additional sections
+  const howItWorksSteps = [
+    {
+      step: '01',
+      title: language === 'en' ? 'Select Your District' : 'अपना जिला चुनें',
+      description: language === 'en' 
+        ? 'Choose your state and district from the dropdown or use auto-detect location feature'
+        : 'ड्रॉपडाउन से अपना राज्य और जिला चुनें या ऑटो-डिटेक्ट लोकेशन फीचर का उपयोग करें'
+    },
+    {
+      step: '02',
+      title: language === 'en' ? 'View Dashboard' : 'डैशबोर्ड देखें',
+      description: language === 'en'
+        ? 'Access comprehensive data visualizations showing employment, wages, and works in simple graphs'
+        : 'सरल ग्राफ़ में रोजगार, मजदूरी और कार्यों को दर्शाने वाले व्यापक डेटा विज़ुअलाइज़ेशन तक पहुंचें'
+    },
+    {
+      step: '03',
+      title: language === 'en' ? 'Compare Districts' : 'जिलों की तुलना करें',
+      description: language === 'en'
+        ? 'Compare multiple districts side-by-side to understand relative performance and identify best practices'
+        : 'सापेक्ष प्रदर्शन को समझने और सर्वोत्तम प्रथाओं की पहचान करने के लिए कई जिलों की तुलना करें'
+    },
+    {
+      step: '04',
+      title: language === 'en' ? 'Ask Questions' : 'सवाल पूछें',
+      description: language === 'en'
+        ? 'Use our AI chatbot to get instant answers about MGNREGA data and policies in your language'
+        : 'अपनी भाषा में मनरेगा डेटा और नीतियों के बारे में तत्काल उत्तर पाने के लिए हमारे AI चैटबॉट का उपयोग करें'
+    }
+  ];
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (stateDropdownRef.current && !stateDropdownRef.current.contains(event.target)) {
+        setShowStateDropdown(false);
+      }
+      if (districtDropdownRef.current && !districtDropdownRef.current.contains(event.target)) {
+        setShowDistrictDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filter states based on search term
+  const filteredStates = states.filter(state =>
+    state.stateName.toLowerCase().includes(stateSearchTerm.toLowerCase())
+  );
+
+  // Filter districts based on search term
+  const filteredDistricts = districts.filter(district =>
+    district.districtName.toLowerCase().includes(districtSearchTerm.toLowerCase())
+  );
+
+  const handleStateSelect = (stateName) => {
+    setSelectedState(stateName);
+    setStateSearchTerm(stateName);
+    setShowStateDropdown(false);
+    setDistrictSearchTerm('');
+  };
+
+  const handleDistrictSelectFromSearch = (district) => {
+    setDistrictSearchTerm(district.districtName);
+    setShowDistrictDropdown(false);
+    handleDistrictSelect(district);
+  };
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#fff9f1' }}>
       {/* Hero Section with Gradient Borders */}
@@ -299,7 +384,11 @@ const Home = () => {
               <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
             </button>
             <button 
-              onClick={() => navigate('/about')}
+              onClick={() => {
+                setChatbotOpen(true);
+                // Dispatch custom event to open chatbot
+                window.dispatchEvent(new CustomEvent('openChatbot'));
+              }}
               className="group flex w-60 transform items-center justify-center space-x-2 rounded-xl border-2 border-orange-500 bg-white px-6 py-3 font-semibold text-orange-600 transition-all duration-300 hover:-translate-y-0.5 hover:bg-orange-50"
             >
               <Sparkles className="w-5 h-5" />
@@ -320,38 +409,51 @@ const Home = () => {
               {/* State Selection */}
               <div className="space-y-6">
                 <div>
-                  <div className="relative">
+                  <div className="relative" ref={stateDropdownRef}>
                     <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none z-10" />
-                    <select
-                      value={selectedState}
-                      onChange={(e) => setSelectedState(e.target.value)}
-                      className="w-full pl-12 pr-8 py-2 text-lg border-2 border-gray-300 rounded-xl focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200 appearance-none bg-white cursor-pointer transition-all hover:border-gray-400 font-medium text-gray-700"
-                      disabled={loading}
-                      style={{
-                        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23f97316'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
-                        backgroundRepeat: 'no-repeat',
-                        backgroundPosition: 'right 1rem center',
-                        backgroundSize: '1.5rem'
+                    <input
+                      type="text"
+                      value={stateSearchTerm}
+                      onChange={(e) => {
+                        setStateSearchTerm(e.target.value);
+                        setShowStateDropdown(true);
                       }}
-                    >
-                      <option value="" className="text-gray-500">
-                        {language === 'en' ? 'Choose a state...' : 'एक राज्य चुनें...'}
-                      </option>
-                      {states.map((state) => (
-                        <option 
-                          key={state.stateCode || state.stateName} 
-                          value={state.stateName}
-                          className="py-2 text-gray-800"
-                        >
-                          {state.stateName}
-                        </option>
-                      ))}
-                    </select>
+                      onFocus={() => setShowStateDropdown(true)}
+                      placeholder={language === 'en' ? 'Search or select a state...' : 'राज्य खोजें या चुनें...'}
+                      className="w-full pl-12 pr-4 py-2 text-lg border-2 border-gray-300 rounded-xl focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white cursor-text transition-all hover:border-gray-400 font-medium text-gray-700"
+                      disabled={loading}
+                    />
+                    
+                    {/* Custom State Dropdown */}
+                    {showStateDropdown && filteredStates.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="absolute z-20 w-full mt-2 bg-white border-2 border-gray-300 rounded-xl shadow-xl max-h-64 overflow-y-auto"
+                      >
+                        {filteredStates.map((state) => (
+                          <button
+                            key={state.stateCode || state.stateName}
+                            onClick={() => handleStateSelect(state.stateName)}
+                            className="w-full text-left px-4 py-3 hover:bg-orange-50 transition-colors border-b border-gray-100 last:border-b-0 font-medium text-gray-700 hover:text-orange-600"
+                          >
+                            {state.stateName}
+                          </button>
+                        ))}
+                        
+                        {filteredStates.length === 0 && stateSearchTerm && (
+                          <div className="px-4 py-3 text-gray-500 text-center">
+                            {language === 'en' ? 'No states found' : 'कोई राज्य नहीं मिला'}
+                          </div>
+                        )}
+                      </motion.div>
+                    )}
                   </div>
                 </div>
 
-                {/* District Selection */}
-                {selectedState && (
+                {/* District Search - NEW */}
+                {selectedState && districts.length > 0 && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
@@ -360,27 +462,81 @@ const Home = () => {
                     <label className="block text-lg font-semibold text-gray-700 mb-3">
                       {t.selectDistrict}
                     </label>
-                    {loading ? (
-                      <LoadingSpinner message={language === 'en' ? 'Loading districts...' : 'जिले लोड हो रहे हैं...'} size="small" />
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto p-2 bg-gray-50 rounded-xl border border-gray-200">
-                        {districts.map((district) => (
-                          <motion.button
-                            key={district.districtCode}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => handleDistrictSelect(district)}
-                            className="text-left p-4 border-2 border-gray-200 rounded-xl hover:border-orange-500 hover:bg-orange-50 transition-all font-medium text-gray-800 bg-white hover:shadow-sm"
-                          >
-                            <div className="flex items-center justify-between">
-                              <span>{district.districtName}</span>
-                              <svg className="w-4 h-4 text-orange-500 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                              </svg>
-                            </div>
-                          </motion.button>
-                        ))}
-                      </div>
+                    
+                    <div className="relative mb-4" ref={districtDropdownRef}>
+                      <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none z-10" />
+                      <input
+                        type="text"
+                        value={districtSearchTerm}
+                        onChange={(e) => {
+                          setDistrictSearchTerm(e.target.value);
+                          setShowDistrictDropdown(true);
+                        }}
+                        onFocus={() => setShowDistrictDropdown(true)}
+                        placeholder={language === 'en' ? 'Search district...' : 'जिला खोजें...'}
+                        className="w-full pl-12 pr-4 py-2 text-base border-2 border-gray-300 rounded-xl focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200 bg-white cursor-text transition-all hover:border-gray-400 font-medium text-gray-700"
+                        disabled={loading}
+                      />
+                      
+                      {/* Custom District Dropdown */}
+                      {showDistrictDropdown && districtSearchTerm && filteredDistricts.length > 0 && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="absolute z-20 w-full mt-2 bg-white border-2 border-gray-300 rounded-xl shadow-xl max-h-64 overflow-y-auto"
+                        >
+                          {filteredDistricts.map((district) => (
+                            <button
+                              key={district.districtCode}
+                              onClick={() => handleDistrictSelectFromSearch(district)}
+                              className="w-full text-left px-4 py-3 hover:bg-orange-50 transition-colors border-b border-gray-100 last:border-b-0 font-medium text-gray-700 hover:text-orange-600"
+                            >
+                              {district.districtName}
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                      
+                      {showDistrictDropdown && districtSearchTerm && filteredDistricts.length === 0 && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="absolute z-20 w-full mt-2 bg-white border-2 border-gray-300 rounded-xl shadow-lg px-4 py-3"
+                        >
+                          <p className="text-gray-500 text-center text-sm">
+                            {language === 'en' ? 'No districts found' : 'कोई जिला नहीं मिला'}
+                          </p>
+                        </motion.div>
+                      )}
+                    </div>
+
+                    {/* District Grid - Show when not searching or no results */}
+                    {(!districtSearchTerm || filteredDistricts.length === 0) && (
+                      <>
+                        {loading ? (
+                          <LoadingSpinner message={language === 'en' ? 'Loading districts...' : 'जिले लोड हो रहे हैं...'} size="small" />
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto p-2 bg-gray-50 rounded-xl border border-gray-200">
+                            {districts.map((district) => (
+                              <motion.button
+                                key={district.districtCode}
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => handleDistrictSelect(district)}
+                                className="text-left p-4 border-2 border-gray-200 rounded-xl hover:border-orange-500 hover:bg-orange-50 transition-all font-medium text-gray-800 bg-white hover:shadow-sm"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span>{district.districtName}</span>
+                                  <svg className="w-4 h-4 text-orange-500 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                  </svg>
+                                </div>
+                              </motion.button>
+                            ))}
+                          </div>
+                        )}
+                      </>
                     )}
                   </motion.div>
                 )}
@@ -390,7 +546,70 @@ const Home = () => {
         </div>
       </div>
 
-      {/* Features Section */}
+      {/* How It Works Section - NEW */}
+      <div className="bg-gradient-to-b from-white to-orange-50/30 py-16 md:py-24">
+        <div className="container mx-auto px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="text-center mb-16"
+          >
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">
+              {language === 'en' ? 'How It Works' : 'यह कैसे काम करता है'}
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              {language === 'en' 
+                ? 'Four simple steps to access and understand MGNREGA data in your district'
+                : 'अपने जिले में मनरेगा डेटा तक पहुंचने और समझने के लिए चार सरल कदम'}
+            </p>
+          </motion.div>
+
+          <div className="max-w-5xl mx-auto">
+            {howItWorksSteps.map((item, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: index * 0.15 }}
+                className="relative"
+              >
+                {/* Connecting Line */}
+                {index < howItWorksSteps.length - 1 && (
+                  <div className="hidden md:block absolute left-12 top-24 w-0.5 h-full bg-gradient-to-b from-orange-400 to-orange-200" />
+                )}
+
+                <div className="flex flex-col md:flex-row items-start gap-6 mb-12 md:mb-16">
+                  {/* Step Number */}
+                  <motion.div
+                    whileHover={{ scale: 1.1 }}
+                    className="flex-shrink-0 w-24 h-24 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg relative z-10"
+                  >
+                    <span className="text-3xl font-bold text-white">{item.step}</span>
+                  </motion.div>
+
+                  {/* Content */}
+                  <div className="flex-1 bg-white rounded-2xl p-6 md:p-8 border-2 border-orange-200 hover:border-orange-400 transition-all hover:shadow-xl">
+                    <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-3">
+                      {item.title}
+                    </h3>
+                    <p className="text-gray-600 leading-relaxed">
+                      {item.description}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* India Map Section - NEW */}
+      <IndiaMap />
+
+      {/* Features Section - MOVED HERE */}
       <div className="container mx-auto px-8 py-16 md:py-20">
         <motion.h2 
           initial={{ opacity: 0, y: 20 }}
@@ -423,6 +642,111 @@ const Home = () => {
               </motion.div>
             );
           })}
+        </div>
+      </div>
+
+      {/* Compare Feature Showcase - NEW */}
+      <div className="bg-white py-16 md:py-24">
+        <div className="container mx-auto px-8">
+          <div className="max-w-6xl mx-auto">
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+              {/* Left Content */}
+              <motion.div
+                initial={{ opacity: 0, x: -50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+              >
+                <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-6">
+                  {language === 'en' ? 'Compare & Analyze Districts' : 'जिलों की तुलना और विश्लेषण करें'}
+                </h2>
+                <p className="text-lg text-gray-600 mb-6 leading-relaxed">
+                  {language === 'en'
+                    ? 'Compare multiple districts side-by-side to identify best performers, understand trends, and learn from successful implementations.'
+                    : 'कई जिलों की तुलना करें, सर्वश्रेष्ठ प्रदर्शन करने वालों की पहचान करें, रुझानों को समझें और सफल कार्यान्वयन से सीखें।'}
+                </p>
+                <ul className="space-y-4 mb-8">
+                  {[
+                    language === 'en' ? 'Unlimited district comparisons' : 'असीमित जिला तुलना',
+                    language === 'en' ? 'Visual charts and graphs' : 'दृश्य चार्ट और ग्राफ़',
+                    language === 'en' ? 'Export data for analysis' : 'विश्लेषण के लिए डेटा निर्यात करें',
+                    language === 'en' ? 'Year-over-year trends' : 'वर्ष-दर-वर्ष रुझान'
+                  ].map((item, index) => (
+                    <motion.li
+                      key={index}
+                      initial={{ opacity: 0, x: -20 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 0.4, delay: 0.3 + index * 0.1 }}
+                      className="flex items-center space-x-3"
+                    >
+                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center">
+                        <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <span className="text-gray-700 font-medium">{item}</span>
+                    </motion.li>
+                  ))}
+                </ul>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => navigate('/compare')}
+                  className="bg-orange-600 hover:bg-orange-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-all shadow-lg hover:shadow-xl flex items-center space-x-2"
+                >
+                  <span>{language === 'en' ? 'Try Comparison Tool' : 'तुलना टूल आज़माएं'}</span>
+                  <ArrowRight className="w-5 h-5" />
+                </motion.button>
+              </motion.div>
+
+              {/* Right Visual */}
+              <motion.div
+                initial={{ opacity: 0, x: 50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+                className="relative"
+              >
+                <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-3xl p-8 border-2 border-orange-200">
+                  {/* Mock Comparison Cards */}
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((_, index) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.4, delay: 0.2 + index * 0.1 }}
+                        className="bg-white rounded-xl p-4 shadow-md flex items-center justify-between"
+                      >
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-12 h-12 rounded-lg ${
+                            index === 0 ? 'bg-green-100' : index === 1 ? 'bg-blue-100' : 'bg-purple-100'
+                          } flex items-center justify-center`}>
+                            <TrendingUp className={`w-6 h-6 ${
+                              index === 0 ? 'text-green-600' : index === 1 ? 'text-blue-600' : 'text-purple-600'
+                            }`} />
+                          </div>
+                          <div>
+                            <div className="font-semibold text-gray-800">
+                              {language === 'en' ? 'District' : 'जिला'} {index + 1}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {language === 'en' ? 'Performance' : 'प्रदर्शन'}: {95 - index * 10}%
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-2xl font-bold text-gray-800">
+                          {95 - index * 10}
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

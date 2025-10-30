@@ -157,3 +157,57 @@ export const debounce = (func, wait) => {
     timeout = setTimeout(later, wait);
   };
 };
+
+// Normalize location names for better matching
+export const normalizeLocationName = (name) => {
+  if (!name) return '';
+  
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ') // normalize spaces
+    .replace(/[^\w\s]/g, '') // remove special characters
+    .replace(/\b(district|जिला)\b/gi, '') // remove "district" word
+    .trim();
+};
+
+// Common location aliases for better matching
+export const locationAliases = {
+  'delhi': ['new delhi', 'dilli', 'दिल्ली'],
+  'mumbai': ['bombay', 'मुंबई'],
+  'bengaluru': ['bangalore', 'बेंगलुरु'],
+  'kolkata': ['calcutta', 'कोलकाता'],
+  'chennai': ['madras', 'चेन्नई'],
+  'hyderabad': ['हैदराबाद'],
+  'ahmedabad': ['अहमदाबाद'],
+  'pune': ['पुणे'],
+  'gandhinagar': ['गांधीनगर'],
+  'jaipur': ['जयपुर'],
+  'lucknow': ['लखनऊ'],
+  'patna': ['पटना'],
+  'bhopal': ['भोपाल'],
+  'thiruvananthapuram': ['trivandrum', 'तिरुवनंतपुरम'],
+};
+
+// Match location with aliases
+export const matchLocationWithAlias = (input, locationName) => {
+  const normalizedInput = normalizeLocationName(input);
+  const normalizedLocation = normalizeLocationName(locationName);
+  
+  // Direct match
+  if (normalizedInput.includes(normalizedLocation) || normalizedLocation.includes(normalizedInput)) {
+    return true;
+  }
+  
+  // Check aliases
+  for (const [key, aliases] of Object.entries(locationAliases)) {
+    if (normalizedLocation.includes(key) || key.includes(normalizedLocation)) {
+      return aliases.some(alias => 
+        normalizedInput.includes(normalizeLocationName(alias)) || 
+        normalizeLocationName(alias).includes(normalizedInput)
+      );
+    }
+  }
+  
+  return false;
+};

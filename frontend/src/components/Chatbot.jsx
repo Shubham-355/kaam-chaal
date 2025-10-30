@@ -3,9 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, X, Send, Loader2, Sparkles, User, Bot } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { apiService } from '../services/api';
+import { useNavigate } from 'react-router-dom';
 
 const Chatbot = () => {
-  const { language, selectedDistrict } = useApp();
+  const { language, selectedDistrict, setSelectedDistrict } = useApp();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -15,33 +17,61 @@ const Chatbot = () => {
   const translations = {
     en: {
       title: 'MGNREGA Assistant',
-      placeholder: 'Ask about MGNREGA data...',
+      placeholder: 'Ask me anything or say "show Mumbai"...',
       send: 'Send',
-      greeting: 'Hello! I can help you understand MGNREGA data. Ask me anything about employment, wages, or district performance.',
+      greeting: 'Hello! I can help you navigate and understand MGNREGA data. Try saying:\n• "Show me (cityname) data"\n• "Compare (state1) and (state2)"\n• "Take me to dashboard"\n• "What is MGNREGA?"',
       quickQuestions: [
+        'Show me data of (cityname)',
+        'Compare two districts',
         'What is MGNREGA?',
-        'How to check my district data?',
-        'Explain performance score',
-        'What are the key metrics?'
+        'Go to dashboard'
       ],
       errorMessage: 'Sorry, I encountered an error. Please try again.',
+      navigating: '🚀 Taking you there...',
+      thinking: 'Thinking...',
+      suggestions: 'Try asking:',
     },
     hi: {
       title: 'मनरेगा सहायक',
-      placeholder: 'मनरेगा डेटा के बारे में पूछें...',
+      placeholder: 'कुछ भी पूछें या कहें "दिल्ली दिखाओ"...',
       send: 'भेजें',
-      greeting: 'नमस्ते! मैं आपको मनरेगा डेटा समझने में मदद कर सकता हूं। रोजगार, मजदूरी, या जिले के प्रदर्शन के बारे में कुछ भी पूछें।',
+      greeting: 'नमस्ते! मैं आपको नेविगेट करने और मनरेगा डेटा समझने में मदद कर सकता हूं। कोशिश करें:\n• "दिल्ली का डेटा दिखाओ"\n• "गुजरात और महाराष्ट्र की तुलना"\n• "डैशबोर्ड पर ले जाओ"\n• "मनरेगा क्या है?"',
       quickQuestions: [
+        'दिल्ली दिखाओ',
+        'दो जिलों की तुलना',
         'मनरेगा क्या है?',
-        'मेरे जिले का डेटा कैसे देखें?',
-        'प्रदर्शन स्कोर समझाएं',
-        'मुख्य मापदंड क्या हैं?'
+        'डैशबोर्ड खोलो'
       ],
       errorMessage: 'क्षमा करें, मुझे एक त्रुटि का सामना करना पड़ा। कृपया पुनः प्रयास करें।',
+      navigating: '🚀 वहाँ ले जा रहे हैं...',
+      thinking: 'सोच रहा हूं...',
+      suggestions: 'पूछने की कोशिश करें:',
     }
   };
 
   const t = translations[language];
+
+  useEffect(() => {
+    // Listen for custom event to open chatbot
+    const handleOpenChatbot = () => {
+      setIsOpen(true);
+      // Add a welcome message about MGNREGA if chatbot is opened via Learn More
+      if (messages.length === 0) {
+        const welcomeMessage = language === 'en' 
+          ? 'Hello! I can help you learn about MGNREGA. Would you like to know:\n• What is MGNREGA?\n• How to check district data?\n• Understanding performance metrics?\n• How to use this tracker?'
+          : 'नमस्ते! मैं आपको मनरेगा के बारे में जानने में मदद कर सकता हूं। क्या आप जानना चाहेंगे:\n• मनरेगा क्या है?\n• जिला डेटा कैसे देखें?\n• प्रदर्शन मेट्रिक्स को समझना?\n• इस ट्रैकर का उपयोग कैसे करें?';
+        
+        setMessages([{
+          type: 'bot',
+          content: welcomeMessage,
+          timestamp: new Date()
+        }]);
+      }
+    };
+
+    window.addEventListener('openChatbot', handleOpenChatbot);
+    return () => window.removeEventListener('openChatbot', handleOpenChatbot);
+  }, [language, messages.length]);
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
@@ -174,6 +204,11 @@ const Chatbot = () => {
       };
 
       setMessages(prev => [...prev, botMessage]);
+
+      // Handle actions
+      if (response.data.action) {
+        handleAction(response.data.action);
+      }
     } catch (error) {
       console.error('Chat error:', error);
       setMessages(prev => [...prev, {
@@ -185,6 +220,111 @@ const Chatbot = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAction = (action) => {
+    if (!action) return;
+
+    // Show a smart navigating message based on action
+    let navigatingMessage = '';
+    
+    if (action.target === 'compare' && action.states && action.states.length >= 2) {
+      navigatingMessage = language === 'en' 
+        ? `🚀 Taking you to compare ${action.states.map(s => s.stateName).join(' and ')}...` 
+        : `🚀 ${action.states.map(s => s.stateName).join(' और ')} की तुलना के लिए ले जा रहे हैं...`;
+    } else if (action.target === 'compare' && action.state) {
+      navigatingMessage = language === 'en' 
+        ? `🚀 Taking you to comparison tool with ${action.state.stateName} pre-selected...` 
+        : `🚀 ${action.state.stateName} पूर्व-चयनित के साथ तुलना टूल पर ले जा रहे हैं...`;
+    } else if (action.target === 'compare') {
+      navigatingMessage = language === 'en' 
+        ? `🚀 Opening comparison tool...` 
+        : `🚀 तुलना टूल खोल रहे हैं...`;
+    } else if (action.target === 'district' && action.district) {
+      navigatingMessage = language === 'en' 
+        ? `🚀 Opening ${action.district.districtName} dashboard...` 
+        : `🚀 ${action.district.districtName} डैशबोर्ड खोल रहे हैं...`;
+    } else if (action.target === 'state' && action.state) {
+      navigatingMessage = language === 'en' 
+        ? `🚀 Showing districts in ${action.state.stateName}...` 
+        : `🚀 ${action.state.stateName} के जिले दिखा रहे हैं...`;
+    } else if (action.target === 'about') {
+      navigatingMessage = language === 'en' 
+        ? `🚀 Taking you to about page...` 
+        : `🚀 जानकारी पृष्ठ पर ले जा रहे हैं...`;
+    } else if (action.target === 'dashboard') {
+      navigatingMessage = language === 'en' 
+        ? `🚀 Opening your dashboard...` 
+        : `🚀 आपका डैशबोर्ड खोल रहे हैं...`;
+    } else if (action.target === 'home') {
+      navigatingMessage = language === 'en' 
+        ? `🚀 Taking you home...` 
+        : `🚀 मुख्य पृष्ठ पर ले जा रहे हैं...`;
+    } else {
+      navigatingMessage = t.navigating;
+    }
+    
+    setMessages(prev => [...prev, {
+      type: 'bot',
+      content: navigatingMessage,
+      timestamp: new Date(),
+      isSystem: true
+    }]);
+
+    setTimeout(() => {
+      switch (action.type) {
+        case 'navigate':
+          if (action.target === 'compare') {
+            // Navigate to compare page
+            if (action.states && action.states.length >= 2) {
+              navigate('/compare', { state: { preSelectedStates: action.states.map(s => s.stateName) } });
+            } else if (action.state) {
+              navigate('/compare', { state: { preSelectedState: action.state.stateName } });
+            } else {
+              navigate('/compare');
+            }
+            setIsOpen(false);
+          } else if (action.target === 'district' && action.district) {
+            setSelectedDistrict(action.district);
+            navigate('/dashboard');
+            setIsOpen(false);
+          } else if (action.target === 'state' && action.state) {
+            navigate('/', { state: { selectedState: action.state.stateName } });
+            setIsOpen(false);
+          } else if (action.target === 'about') {
+            navigate('/about');
+            setIsOpen(false);
+          } else if (action.target === 'dashboard') {
+            if (selectedDistrict) {
+              navigate('/dashboard');
+            } else {
+              navigate('/');
+            }
+            setIsOpen(false);
+          } else if (action.target === 'home') {
+            navigate('/');
+            setIsOpen(false);
+          }
+          break;
+        
+        case 'compare':
+          if (action.district) {
+            setSelectedDistrict(action.district);
+            navigate('/compare', { state: { preSelectedDistrict: action.district } });
+            setIsOpen(false);
+          } else if (action.state) {
+            navigate('/compare', { state: { preSelectedState: action.state.stateName } });
+            setIsOpen(false);
+          } else {
+            navigate('/compare');
+            setIsOpen(false);
+          }
+          break;
+        
+        default:
+          break;
+      }
+    }, 600);
   };
 
   const handleQuickQuestion = (question) => {
@@ -210,7 +350,7 @@ const Chatbot = () => {
               exit={{ rotate: 90, opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              <X className="w-6 h-6" />
+              <X className="w-6 h-6 pl-1" />
             </motion.div>
           ) : (
             <motion.div
@@ -220,7 +360,7 @@ const Chatbot = () => {
               exit={{ rotate: -90, opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              <MessageCircle className="w-6 h-6" />
+              <MessageCircle className="w-6 h-6 pl-1" />
             </motion.div>
           )}
         </AnimatePresence>
@@ -301,25 +441,50 @@ const Chatbot = () => {
                 >
                   <div className="flex items-center space-x-2 bg-white border border-gray-200 p-3 rounded-2xl">
                     <Loader2 className="w-4 h-4 animate-spin text-orange-500" />
-                    <span className="text-sm text-gray-600">Thinking...</span>
+                    <span className="text-sm text-gray-600">{t.thinking}</span>
                   </div>
                 </motion.div>
               )}
 
-              {/* Quick Questions */}
+              {/* Smart Quick Questions - Context aware */}
               {messages.length === 1 && !loading && (
                 <div className="space-y-2">
-                  <p className="text-xs text-gray-500 text-center mb-2">Quick questions:</p>
+                  <p className="text-xs text-gray-500 text-center mb-2 font-medium">{t.suggestions}</p>
                   {t.quickQuestions.map((question, index) => (
                     <button
                       key={index}
                       onClick={() => handleQuickQuestion(question)}
-                      className="w-full text-left p-2 text-xs bg-white hover:bg-orange-50 border border-gray-200 hover:border-orange-300 rounded-lg transition-colors"
+                      className="w-full text-left p-3 text-xs bg-white hover:bg-orange-50 border border-gray-200 hover:border-orange-400 rounded-lg transition-all font-medium text-gray-700 hover:text-orange-600 hover:shadow-sm"
                     >
                       {question}
                     </button>
                   ))}
                 </div>
+              )}
+
+              {/* Smart Suggestions after action */}
+              {messages.length > 2 && !loading && messages[messages.length - 1].isSystem && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-2 mt-2"
+                >
+                  <p className="text-xs text-gray-500 text-center mb-2">{language === 'en' ? 'Need help with anything else?' : 'कुछ और मदद चाहिए?'}</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      language === 'en' ? 'Compare districts' : 'जिलों की तुलना',
+                      language === 'en' ? 'Go home' : 'होम जाएं'
+                    ].map((suggestion, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleQuickQuestion(suggestion)}
+                        className="text-xs p-2 bg-orange-50 hover:bg-orange-100 border border-orange-200 hover:border-orange-300 rounded-lg transition-all font-medium text-orange-700"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                </motion.div>
               )}
 
               <div ref={messagesEndRef} />

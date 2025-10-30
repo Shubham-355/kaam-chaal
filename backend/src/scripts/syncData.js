@@ -15,21 +15,25 @@ const states = statesArg ? statesArg.split(',').map(s => s.trim()) : null;
 const finYears = finYearsArg ? finYearsArg.split(',').map(y => y.trim()) : null;
 
 if (states) {
-  console.log(`Starting manual sync for states: ${states.join(', ')}`);
+  console.log(`\n🚀 Starting manual sync for states: ${states.join(', ')}`);
 } else {
-  console.log('Starting manual sync for ALL states');
+  console.log('\n🚀 Starting manual sync for ALL states');
 }
 
 if (finYears) {
-  console.log(`Financial years: ${finYears.join(', ')}`);
+  console.log(`📅 Financial years: ${finYears.join(', ')}`);
+} else {
+  console.log(`📅 Using financial years from .env`);
 }
+
+console.log(`⚙️  Sync strategy: Reverse year order (latest first), all states per year\n`);
 
 syncDataJob(states, finYears)
   .then(() => {
-    console.log('\n✓ Sync completed successfully');
+    console.log('\n✅ Sync completed successfully');
     process.exit(0);
   })
   .catch((error) => {
-    console.error('\n✗ Sync failed:', error);
+    console.error('\n❌ Sync failed:', error);
     process.exit(1);
   });

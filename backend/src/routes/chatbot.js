@@ -14,12 +14,13 @@ router.post('/chat', async (req, res, next) => {
       });
     }
 
-    const response = await chatbotService.generateResponse(message, context || {});
+    const result = await chatbotService.generateResponse(message, context || {});
 
     res.json({
       success: true,
       data: {
-        response,
+        response: result.text,
+        action: result.action,
         timestamp: new Date().toISOString()
       }
     });
