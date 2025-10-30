@@ -51,6 +51,7 @@ export const apiService = {
   getDistrictData: async (districtCode, finYear = null) => {
     const params = finYear ? { finYear } : {};
     const response = await api.get(`/districts/${districtCode}`, { params });
+    // Response is already { success: true, data: { records: [...] } }
     return response.data;
   },
 

@@ -3,6 +3,29 @@ import prisma from '../config/database.js';
 
 const router = express.Router();
 
+// Helper function to convert BigInt to string recursively
+const serializeBigInt = (obj) => {
+  if (obj === null || obj === undefined) return obj;
+  
+  if (typeof obj === 'bigint') {
+    return obj.toString();
+  }
+  
+  if (Array.isArray(obj)) {
+    return obj.map(item => serializeBigInt(item));
+  }
+  
+  if (typeof obj === 'object') {
+    const serialized = {};
+    for (const key in obj) {
+      serialized[key] = serializeBigInt(obj[key]);
+    }
+    return serialized;
+  }
+  
+  return obj;
+};
+
 router.get('/district/:districtCode/summary', async (req, res, next) => {
   try {
     const { districtCode } = req.params;
@@ -32,13 +55,13 @@ router.get('/district/:districtCode/summary', async (req, res, next) => {
     if (!records || records.length === 0) {
       return res.json({
         success: true,
-        data: {
+        data: serializeBigInt({
           totalEmployment: 0,
           totalExpenditure: 0,
           avgWageRate: 0,
           worksCompleted: 0,
           district,
-        },
+        }),
       });
     }
 
@@ -50,7 +73,7 @@ router.get('/district/:districtCode/summary', async (req, res, next) => {
       district,
     };
 
-    res.json({ success: true, data: summary });
+    res.json({ success: true, data: serializeBigInt(summary) });
   } catch (error) {
     next(error);
   }

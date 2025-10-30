@@ -1,4 +1,5 @@
 import { Book, Users, TrendingUp, Shield, Globe, Heart } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useApp } from '../context/AppContext';
 
 const About = () => {
@@ -87,131 +88,168 @@ const About = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero */}
-      <div className="bg-linear-to-r from-orange-600 to-orange-500 text-white py-16">
-        <div className="container mx-auto px-4 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">{t.title}</h1>
-          <p className="text-xl text-orange-100">{t.subtitle}</p>
+    <div className="min-h-screen md:px-20 lg:px-23" style={{ backgroundColor: '#fff9f1' }}>
+      {/* Hero Section - Minimal */}
+      <div className="container mx-auto px-8 py-10 md:py-12">
+        <div className="text-center mb-10">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2">
+            {t.title}
+          </h1>
+          <p className="text-gray-600">
+            {t.subtitle}
+          </p>
         </div>
-      </div>
 
-      <div className="container mx-auto px-4 py-12">
         {/* What is MGNREGA */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
-          <h2 className="text-3xl font-bold text-gray-800 mb-6">{t.whatIs}</h2>
-          <p className="text-lg text-gray-700 leading-relaxed">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 mb-8"
+        >
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-4">{t.whatIs}</h2>
+          <p className="text-base text-gray-700 leading-relaxed mb-6">
             {t.whatIsDesc}
           </p>
-          <div className="mt-6 grid md:grid-cols-3 gap-4">
-            <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-4 text-center">
-              <p className="text-4xl font-bold text-orange-600 mb-2">100</p>
-              <p className="font-semibold text-gray-700">
+          <div className="grid md:grid-cols-3 gap-4">
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-5 text-center hover:border-orange-300 transition-colors">
+              <p className="text-3xl font-bold text-orange-600 mb-2">100</p>
+              <p className="text-sm font-medium text-gray-700">
                 {language === 'en' ? 'Days Guaranteed' : 'गारंटीड दिन'}
               </p>
             </div>
-            <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 text-center">
-              <p className="text-4xl font-bold text-blue-600 mb-2">12.15 Cr</p>
-              <p className="font-semibold text-gray-700">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-5 text-center hover:border-blue-300 transition-colors">
+              <p className="text-3xl font-bold text-blue-600 mb-2">12.15 Cr</p>
+              <p className="text-sm font-medium text-gray-700">
                 {language === 'en' ? 'Beneficiaries (2025)' : 'लाभार्थी (2025)'}
               </p>
             </div>
-            <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 text-center">
-              <p className="text-4xl font-bold text-green-600 mb-2">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-5 text-center hover:border-green-300 transition-colors">
+              <p className="text-3xl font-bold text-green-600 mb-2">
                 {language === 'en' ? 'Largest' : 'सबसे बड़ा'}
               </p>
-              <p className="font-semibold text-gray-700">
+              <p className="text-sm font-medium text-gray-700">
                 {language === 'en' ? 'Employment Scheme' : 'रोजगार योजना'}
               </p>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Our Mission */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
-          <div className="flex items-start space-x-4">
-            <Heart className="w-12 h-12 text-red-500 flex-shrink-0" />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.1 }}
+          className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 mb-8"
+        >
+          <div className="flex flex-col md:flex-row items-start md:items-center space-y-4 md:space-y-0 md:space-x-6">
+            <div className="bg-red-50 border border-red-200 p-4 rounded-xl shrink-0">
+              <Heart className="w-10 h-10 text-red-500" />
+            </div>
             <div>
-              <h2 className="text-3xl font-bold text-gray-800 mb-4">{t.ourMission}</h2>
-              <p className="text-lg text-gray-700 leading-relaxed">
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-3">{t.ourMission}</h2>
+              <p className="text-base text-gray-700 leading-relaxed">
                 {t.ourMissionDesc}
               </p>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Features */}
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-800 text-center mb-8">{t.features}</h2>
-          <div className="grid md:grid-cols-2 gap-6">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">
+            {t.features}
+          </h2>
+          <div className="grid md:grid-cols-2 gap-4">
             {features.map((feature, index) => {
               const Icon = feature.icon;
               const colorClasses = {
-                orange: 'bg-orange-100 text-orange-600 border-orange-200',
-                blue: 'bg-blue-100 text-blue-600 border-blue-200',
-                green: 'bg-green-100 text-green-600 border-green-200',
-                purple: 'bg-purple-100 text-purple-600 border-purple-200',
+                orange: 'bg-orange-50 text-orange-600 border-orange-200',
+                blue: 'bg-blue-50 text-blue-600 border-blue-200',
+                green: 'bg-green-50 text-green-600 border-green-200',
+                purple: 'bg-purple-50 text-purple-600 border-purple-200',
               };
               
               return (
-                <div key={index} className="bg-white rounded-xl shadow-lg p-6">
-                  <div className={`${colorClasses[feature.color]} w-16 h-16 rounded-xl flex items-center justify-center mb-4 border-2`}>
-                    <Icon className="w-8 h-8" />
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  whileHover={{ y: -4 }}
+                  className="bg-white border border-gray-200 rounded-xl p-6 hover:border-orange-300 transition-all"
+                >
+                  <div className={`${colorClasses[feature.color]} w-12 h-12 rounded-xl flex items-center justify-center mb-4 border`}>
+                    <Icon className="w-6 h-6" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">{feature.title}</h3>
-                  <p className="text-gray-700 leading-relaxed">{feature.description}</p>
-                </div>
+                  <h3 className="text-lg font-bold text-gray-800 mb-2">{feature.title}</h3>
+                  <p className="text-sm text-gray-700 leading-relaxed">{feature.description}</p>
+                </motion.div>
               );
             })}
           </div>
         </div>
 
         {/* How It Works */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
-          <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">{t.howItWorks}</h2>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 mb-8"
+        >
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">{t.howItWorks}</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[t.step1, t.step2, t.step3, t.step4].map((step, index) => (
-              <div key={index} className="text-center">
-                <div className="bg-orange-500 text-white w-12 h-12 rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                className="text-center"
+              >
+                <div className="bg-orange-600 text-white w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-4">
                   {index + 1}
                 </div>
-                <p className="text-gray-700 leading-relaxed">{step}</p>
-              </div>
+                <p className="text-sm text-gray-700 leading-relaxed font-medium">{step}</p>
+              </motion.div>
             ))}
           </div>
-        </div>
+        </motion.div>
 
         {/* Data Source */}
-        <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-8 mb-8">
-          <h2 className="text-2xl font-bold text-blue-800 mb-4">{t.dataSource}</h2>
-          <p className="text-lg text-blue-900 leading-relaxed mb-4">
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 md:p-8 mb-8">
+          <h2 className="text-xl md:text-2xl font-bold text-blue-800 mb-3">{t.dataSource}</h2>
+          <p className="text-base text-blue-900 leading-relaxed mb-4">
             {t.dataSourceDesc}
           </p>
           <a
             href="https://data.gov.in"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+            className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors text-sm"
           >
             {language === 'en' ? 'Visit data.gov.in' : 'data.gov.in पर जाएं'}
           </a>
         </div>
 
         {/* Disclaimer */}
-        <div className="bg-yellow-50 border-2 border-yellow-200 rounded-2xl p-8 mb-8">
-          <h2 className="text-2xl font-bold text-yellow-800 mb-4">{t.disclaimer}</h2>
-          <p className="text-lg text-yellow-900 leading-relaxed">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 md:p-8 mb-8">
+          <h2 className="text-xl md:text-2xl font-bold text-yellow-800 mb-3">{t.disclaimer}</h2>
+          <p className="text-base text-yellow-900 leading-relaxed">
             {t.disclaimerDesc}
           </p>
         </div>
 
         {/* Contact */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-          <h2 className="text-3xl font-bold text-gray-800 mb-4">{t.contact}</h2>
-          <p className="text-lg text-gray-700 mb-6">{t.contactDesc}</p>
+        <div className="bg-white border border-gray-200 rounded-xl p-6 md:p-8 text-center">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-3">{t.contact}</h2>
+          <p className="text-base text-gray-700 mb-6">{t.contactDesc}</p>
           <a
             href="mailto:support@example.com"
-            className="inline-block bg-orange-600 hover:bg-orange-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-colors shadow-lg"
+            className="inline-block bg-orange-600 hover:bg-orange-700 text-white px-8 py-3 rounded-lg font-medium transition-colors"
           >
             {language === 'en' ? 'Email Us' : 'हमें ईमेल करें'}
           </a>

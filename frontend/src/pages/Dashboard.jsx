@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { 
   Users, IndianRupee, Briefcase, TrendingUp, Calendar, 
   Award, AlertCircle, ChevronRight, ArrowLeft 
@@ -97,9 +98,8 @@ const Dashboard = () => {
         selectedDistrict.districtCode,
         selectedYear || null
       );
-      // API returns { success: true, data: [...] }
-      // Transform to the expected format
-      const records = Array.isArray(response.data) ? response.data : [];
+      // API now returns { success: true, data: { records: [...] } }
+      const records = response.data?.records || [];
       setDistrictData({ records });
       setError(null);
     } catch (err) {
@@ -178,133 +178,141 @@ const Dashboard = () => {
   const COLORS = ['#10b981', '#f59e0b'];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <button
+    <div className="min-h-screen md:px-20 lg:px-23" style={{ backgroundColor: '#fff9f1' }}>
+      <div className="container mx-auto px-8 py-10 md:py-12">
+        {/* Minimal Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-12"
+        >
+          <motion.button
+            whileHover={{ x: -3 }}
             onClick={() => navigate('/')}
-            className="flex items-center space-x-2 text-orange-600 hover:text-orange-700 font-semibold mb-4"
+            className="flex items-center space-x-2 text-gray-600 hover:text-orange-600 font-medium mb-6 transition-colors"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4" />
             <span>{t.backToHome}</span>
-          </button>
+          </motion.button>
           
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-3xl md:text-4xl font-bold text-gray-800">
-                  {selectedDistrict.districtName}
-                </h1>
-                <p className="text-lg text-gray-600 mt-1">{selectedDistrict.stateName}</p>
-              </div>
-              
-              <div className="mt-4 md:mt-0">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t.selectYear}
-                </label>
-                <select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(e.target.value)}
-                  className="px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none bg-white"
-                >
-                  <option value="">{t.allYears}</option>
-                  {[...new Set(allRecords.map(r => r.finYear))].map(year => (
-                    <option key={year} value={year}>{year}</option>
-                  ))}
-                </select>
-              </div>
+          {/* Clean Header */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-1">
+                {selectedDistrict.districtName}
+              </h1>
+              <p className="text-gray-600 flex items-center space-x-2">
+                <span className="w-1.5 h-1.5 bg-orange-500 rounded-full"></span>
+                <span>{selectedDistrict.stateName}</span>
+              </p>
             </div>
+            
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:border-orange-500 focus:ring-1 focus:ring-orange-200 focus:outline-none bg-white text-sm"
+            >
+              <option value="">{t.allYears}</option>
+              {[...new Set(allRecords.map(r => r.finYear))].map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          </div>
 
-            {/* Performance Score */}
-            <div className="mt-6 bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl p-6 border-2 border-purple-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-purple-800 mb-1">
-                    {t.performanceScore}
-                  </h3>
-                  <div className="flex items-center space-x-3">
-                    <span className="text-5xl font-bold text-purple-900">{performanceScore}</span>
-                    <span className="text-2xl text-purple-700">/100</span>
-                  </div>
-                  <div className="mt-2 flex items-center space-x-2">
-                    <span className="text-3xl">{performanceRating.emoji}</span>
-                    <span className="text-xl font-semibold text-purple-800">{performanceRating.label}</span>
-                  </div>
+          {/* Minimal Performance Score */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 md:p-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">{t.performanceScore}</p>
+                <div className="flex items-baseline space-x-2">
+                  <span className="text-4xl md:text-5xl font-bold text-gray-800">
+                    {performanceScore}
+                  </span>
+                  <span className="text-xl text-gray-500">/100</span>
                 </div>
-                <Award className="w-24 h-24 text-purple-300" />
+                <span className="inline-block mt-2 text-sm font-medium text-orange-600 bg-orange-50 px-3 py-1 rounded-lg">
+                  {performanceRating.label}
+                </span>
               </div>
+              <Award className="w-16 h-16 md:w-20 md:h-20 text-gray-200" />
             </div>
+          </div>
+        </motion.div>
+
+        {/* Minimal Key Metrics */}
+        <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">
+          {t.keyMetrics}
+        </h2>
+        
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
+          <div className="bg-white border border-gray-200 rounded-xl p-5 hover:border-orange-300 transition-colors">
+            <div className="flex items-center justify-between mb-3">
+              <Users className="w-5 h-5 text-orange-600" />
+              <InfoTooltip text={metricExplanations.totalHouseholdsWorked[language]} />
+            </div>
+            <p className="text-2xl md:text-3xl font-bold text-gray-800 mb-1">
+              {formatCount(totalHouseholds)}
+            </p>
+            <p className="text-xs text-gray-600">{t.householdsWorked}</p>
+          </div>
+          
+          <div className="bg-white border border-gray-200 rounded-xl p-5 hover:border-orange-300 transition-colors">
+            <div className="flex items-center justify-between mb-3">
+              <Calendar className="w-5 h-5 text-blue-600" />
+              <InfoTooltip text={metricExplanations.avgDaysEmployment[language]} />
+            </div>
+            <p className="text-2xl md:text-3xl font-bold text-gray-800 mb-1">
+              {Math.round(avgDaysEmployment)}
+            </p>
+            <p className="text-xs text-gray-600">{t.avgDays}</p>
+          </div>
+          
+          <div className="bg-white border border-gray-200 rounded-xl p-5 hover:border-orange-300 transition-colors">
+            <div className="flex items-center justify-between mb-3">
+              <IndianRupee className="w-5 h-5 text-green-600" />
+              <InfoTooltip text={metricExplanations.totalExpenditure[language]} />
+            </div>
+            <p className="text-2xl md:text-3xl font-bold text-gray-800 mb-1">
+              {formatIndianNumber(totalExpenditure)}
+            </p>
+            <p className="text-xs text-gray-600">{t.totalSpent}</p>
+          </div>
+          
+          <div className="bg-white border border-gray-200 rounded-xl p-5 hover:border-orange-300 transition-colors">
+            <div className="flex items-center justify-between mb-3">
+              <TrendingUp className="w-5 h-5 text-purple-600" />
+              <InfoTooltip text={metricExplanations.avgWageRate[language]} />
+            </div>
+            <p className="text-2xl md:text-3xl font-bold text-gray-800 mb-1">
+              ₹{Math.round(avgWageRate)}
+            </p>
+            <p className="text-xs text-gray-600">{t.avgWage}</p>
           </div>
         </div>
 
-        {/* Key Metrics */}
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">{t.keyMetrics}</h2>
-        
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatCard
-            icon={Users}
-            title={t.householdsWorked}
-            value={formatCount(totalHouseholds)}
-            subtitle={t.employment}
-            color="orange"
-            info={
-              <InfoTooltip text={metricExplanations.totalHouseholdsWorked[language]} />
-            }
-          />
-          
-          <StatCard
-            icon={Calendar}
-            title={t.avgDays}
-            value={Math.round(avgDaysEmployment)}
-            subtitle={language === 'en' ? 'days' : 'दिन'}
-            color="blue"
-            info={
-              <InfoTooltip text={metricExplanations.avgDaysEmployment[language]} />
-            }
-          />
-          
-          <StatCard
-            icon={IndianRupee}
-            title={t.totalSpent}
-            value={formatIndianNumber(totalExpenditure)}
-            subtitle={t.financial}
-            color="green"
-            info={
-              <InfoTooltip text={metricExplanations.totalExpenditure[language]} />
-            }
-          />
-          
-          <StatCard
-            icon={TrendingUp}
-            title={t.avgWage}
-            value={`₹${Math.round(avgWageRate)}`}
-            subtitle={language === 'en' ? 'per day' : 'प्रति दिन'}
-            color="purple"
-            info={
-              <InfoTooltip text={metricExplanations.avgWageRate[language]} />
-            }
-          />
-        </div>
+        {/* Works & Inclusion */}
+        <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">
+          {t.works} & {t.inclusion}
+        </h2>
 
-        {/* Works Progress */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
-              <Briefcase className="w-6 h-6 mr-2 text-orange-600" />
+        <div className="grid md:grid-cols-2 gap-6 mb-12">
+          {/* Works - Minimal */}
+          <div className="bg-white border border-gray-200 rounded-xl p-6">
+            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
+              <Briefcase className="w-4 h-4 mr-2 text-orange-600" />
               {t.works}
             </h3>
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4">
-                <p className="text-sm text-green-700 font-semibold mb-1">{t.completed}</p>
-                <p className="text-3xl font-bold text-green-800">{formatCount(totalWorksCompleted)}</p>
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="border border-green-200 rounded-lg p-4">
+                <p className="text-xs text-gray-600 mb-1">{t.completed}</p>
+                <p className="text-2xl font-bold text-green-700">{formatCount(totalWorksCompleted)}</p>
               </div>
-              <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-4">
-                <p className="text-sm text-yellow-700 font-semibold mb-1">{t.ongoing}</p>
-                <p className="text-3xl font-bold text-yellow-800">{formatCount(totalWorksOngoing)}</p>
+              <div className="border border-yellow-200 rounded-lg p-4">
+                <p className="text-xs text-gray-600 mb-1">{t.ongoing}</p>
+                <p className="text-2xl font-bold text-yellow-700">{formatCount(totalWorksOngoing)}</p>
               </div>
             </div>
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={180}>
               <PieChart>
                 <Pie
                   data={worksData}
@@ -312,7 +320,7 @@ const Dashboard = () => {
                   cy="50%"
                   labelLine={false}
                   label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
+                  outerRadius={70}
                   fill="#8884d8"
                   dataKey="value"
                 >
@@ -325,132 +333,148 @@ const Dashboard = () => {
             </ResponsiveContainer>
           </div>
 
-          {/* Social Inclusion */}
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <h3 className="text-xl font-bold text-gray-800 mb-6">{t.inclusion}</h3>
-            <div className="space-y-4">
+          {/* Social Inclusion - Minimal */}
+          <div className="bg-white border border-gray-200 rounded-xl p-6">
+            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
+              <Users className="w-4 h-4 mr-2 text-orange-600" />
+              {t.inclusion}
+            </h3>
+            <div className="space-y-5">
               <div>
                 <div className="flex justify-between mb-2">
-                  <span className="font-semibold text-gray-700">{t.womenWork}</span>
-                  <span className="font-bold text-gray-800">
+                  <span className="text-sm text-gray-700">{t.womenWork}</span>
+                  <span className="text-sm font-bold text-pink-600">
                     {formatCount(latestRecord.womenPersondays)}
                   </span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
-                  <div
-                    className="bg-pink-500 h-3 rounded-full"
-                    style={{
+                <div className="w-full bg-gray-100 rounded-full h-1.5">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    whileInView={{ 
                       width: `${Math.min(
                         (Number(latestRecord.womenPersondays) /
                           Number(latestRecord.totalHouseholdsWorked)) *
                           10,
                         100
-                      )}%`,
+                      )}%`
                     }}
-                  ></div>
+                    viewport={{ once: true }}
+                    transition={{ duration: 1 }}
+                    className="bg-pink-500 h-1.5 rounded-full"
+                  ></motion.div>
                 </div>
               </div>
 
               <div>
                 <div className="flex justify-between mb-2">
-                  <span className="font-semibold text-gray-700">{t.scWorkers}</span>
-                  <span className="font-bold text-gray-800">
+                  <span className="text-sm text-gray-700">{t.scWorkers}</span>
+                  <span className="text-sm font-bold text-blue-600">
                     {formatCount(latestRecord.scWorkers)}
                   </span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
-                  <div
-                    className="bg-blue-500 h-3 rounded-full"
-                    style={{
+                <div className="w-full bg-gray-100 rounded-full h-1.5">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    whileInView={{ 
                       width: `${Math.min(
                         (Number(latestRecord.scWorkers) /
                           Number(latestRecord.totalActiveWorkers)) *
                           100,
                         100
-                      )}%`,
+                      )}%`
                     }}
-                  ></div>
+                    viewport={{ once: true }}
+                    transition={{ duration: 1, delay: 0.2 }}
+                    className="bg-blue-500 h-1.5 rounded-full"
+                  ></motion.div>
                 </div>
               </div>
 
               <div>
                 <div className="flex justify-between mb-2">
-                  <span className="font-semibold text-gray-700">{t.stWorkers}</span>
-                  <span className="font-bold text-gray-800">
+                  <span className="text-sm text-gray-700">{t.stWorkers}</span>
+                  <span className="text-sm font-bold text-green-600">
                     {formatCount(latestRecord.stWorkers)}
                   </span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
-                  <div
-                    className="bg-green-500 h-3 rounded-full"
-                    style={{
+                <div className="w-full bg-gray-100 rounded-full h-1.5">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    whileInView={{ 
                       width: `${Math.min(
                         (Number(latestRecord.stWorkers) /
                           Number(latestRecord.totalActiveWorkers)) *
                           100,
                         100
-                      )}%`,
+                      )}%`
                     }}
-                  ></div>
+                    viewport={{ once: true }}
+                    transition={{ duration: 1, delay: 0.4 }}
+                    className="bg-green-500 h-1.5 rounded-full"
+                  ></motion.div>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Historical Trends */}
+        {/* Trends - Minimal */}
         {monthlyData.length > 1 && (
-          <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-            <h3 className="text-xl font-bold text-gray-800 mb-6">{t.trends}</h3>
-            
-            <div className="mb-8">
-              <h4 className="text-lg font-semibold text-gray-700 mb-4">{t.monthlyEmployment}</h4>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={monthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Line 
-                    type="monotone" 
-                    dataKey="households" 
-                    stroke="#f97316" 
-                    strokeWidth={3}
-                    name={language === 'en' ? 'Households' : 'परिवार'}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+          <>
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">
+              {t.trends}
+            </h2>
 
-            <div>
-              <h4 className="text-lg font-semibold text-gray-700 mb-4">{t.expenditure} (₹ Crores)</h4>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={monthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Legend />
-                  <Bar 
-                    dataKey="expenditure" 
-                    fill="#10b981"
-                    name={language === 'en' ? 'Expenditure' : 'व्यय'}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="bg-white border border-gray-200 rounded-xl p-6 mb-12 space-y-8">
+              <div>
+                <h4 className="text-base font-semibold text-gray-800 mb-4">{t.monthlyEmployment}</h4>
+                <ResponsiveContainer width="100%" height={280}>
+                  <LineChart data={monthlyData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="month" style={{ fontSize: '12px' }} />
+                    <YAxis style={{ fontSize: '12px' }} />
+                    <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="households" 
+                      stroke="#f97316" 
+                      strokeWidth={2}
+                      dot={{ fill: '#f97316', r: 3 }}
+                      name={language === 'en' ? 'Households' : 'परिवार'}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div>
+                <h4 className="text-base font-semibold text-gray-800 mb-4">{t.expenditure} (₹ Cr)</h4>
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={monthlyData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="month" style={{ fontSize: '12px' }} />
+                    <YAxis style={{ fontSize: '12px' }} />
+                    <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }} />
+                    <Bar 
+                      dataKey="expenditure" 
+                      fill="#10b981"
+                      radius={[4, 4, 0, 0]}
+                      name={language === 'en' ? 'Expenditure' : 'व्यय'}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
-          </div>
+          </>
         )}
 
-        {/* View More Link */}
-        <div className="text-center">
+        {/* CTA - Minimal */}
+        <div className="text-center py-6">
           <button
             onClick={() => navigate('/compare')}
-            className="inline-flex items-center space-x-2 bg-orange-600 hover:bg-orange-700 text-white px-8 py-4 rounded-xl font-semibold text-lg transition-colors shadow-lg"
+            className="inline-flex items-center space-x-2 bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-medium text-sm transition-colors"
           >
-            <span>{language === 'en' ? 'Compare with Other Districts' : 'अन्य जिलों से तुलना करें'}</span>
-            <ChevronRight className="w-5 h-5" />
+            <span>{language === 'en' ? 'Compare Districts' : 'जिलों की तुलना करें'}</span>
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
       </div>

@@ -95,11 +95,11 @@ export const calculatePerformanceScore = (record) => {
 
 // Get performance rating
 export const getPerformanceRating = (score) => {
-  if (score >= 80) return { label: 'Excellent', color: 'green', emoji: '🌟' };
-  if (score >= 60) return { label: 'Good', color: 'blue', emoji: '👍' };
-  if (score >= 40) return { label: 'Average', color: 'yellow', emoji: '👌' };
-  if (score >= 20) return { label: 'Needs Improvement', color: 'orange', emoji: '⚠️' };
-  return { label: 'Poor', color: 'red', emoji: '❌' };
+  if (score >= 80) return { label: 'Excellent', color: 'green' };
+  if (score >= 60) return { label: 'Good', color: 'blue' };
+  if (score >= 40) return { label: 'Average', color: 'yellow' };
+  if (score >= 20) return { label: 'Needs Improvement', color: 'orange' };
+  return { label: 'Poor', color: 'red' };
 };
 
 // Simple explanations for metrics (in both English and Hindi)
