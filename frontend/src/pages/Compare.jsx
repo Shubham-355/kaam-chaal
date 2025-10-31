@@ -20,6 +20,7 @@ import {
 } from 'chart.js';
 import { Bar, Line, Pie } from 'react-chartjs-2';
 import * as XLSX from 'xlsx';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 // Register ChartJS components
 ChartJS.register(
@@ -36,6 +37,8 @@ ChartJS.register(
 
 const Compare = () => {
   const { language } = useApp();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [comparisonMode, setComparisonMode] = useState('districts');
   const [states, setStates] = useState([]);
   
@@ -161,6 +164,106 @@ const Compare = () => {
     fetchStates();
   }, []);
 
+  // NEW: Handle pre-selected items from chatbot navigation
+  useEffect(() => {
+    const handlePreSelection = async () => {
+      if (!location.state) return;
+
+      const { 
+        preSelectedStates, 
+        preSelectedState, 
+        preSelectedDistricts, 
+        preSelectedDistrict,
+        compareType 
+      } = location.state;
+
+      // Handle pre-selected districts for comparison
+      if (preSelectedDistricts && preSelectedDistricts.length >= 2) {
+        setComparisonMode('districts');
+        
+        // Find the state these districts belong to
+        const firstDistrict = preSelectedDistricts[0];
+        if (firstDistrict.stateName) {
+          setSelectedState(firstDistrict.stateName);
+          
+          // Wait for districts to load
+          try {
+            setLoading(true);
+            const response = await apiService.getDistrictsByState(firstDistrict.stateName);
+            const stateDistricts = response.data || [];
+            setDistricts(stateDistricts);
+            
+            // Match and select the pre-selected districts
+            const matchedDistricts = preSelectedDistricts.map(preDistrict => 
+              stateDistricts.find(d => 
+                d.districtCode === preDistrict.districtCode || 
+                d.districtName.toLowerCase() === preDistrict.districtName.toLowerCase()
+              )
+            ).filter(Boolean);
+            
+            if (matchedDistricts.length >= 2) {
+              setSelectedDistricts(matchedDistricts);
+              
+              // Auto-trigger comparison
+              setTimeout(() => {
+                handleCompareWithDistricts(matchedDistricts);
+              }, 500);
+            }
+          } catch (error) {
+            console.error('Error loading pre-selected districts:', error);
+            setError('Failed to load district data');
+          } finally {
+            setLoading(false);
+          }
+        }
+      }
+      // Handle single pre-selected district
+      else if (preSelectedDistrict) {
+        setComparisonMode('districts');
+        if (preSelectedDistrict.stateName) {
+          setSelectedState(preSelectedDistrict.stateName);
+          
+          try {
+            const response = await apiService.getDistrictsByState(preSelectedDistrict.stateName);
+            setDistricts(response.data || []);
+            
+            const matched = (response.data || []).find(d => 
+              d.districtCode === preSelectedDistrict.districtCode ||
+              d.districtName.toLowerCase() === preSelectedDistrict.districtName.toLowerCase()
+            );
+            
+            if (matched) {
+              setSelectedDistricts([matched]);
+            }
+          } catch (error) {
+            console.error('Error loading district:', error);
+          }
+        }
+      }
+      // Handle pre-selected states for comparison
+      else if (preSelectedStates && preSelectedStates.length >= 2) {
+        setComparisonMode('states');
+        setSelectedStates(preSelectedStates);
+        
+        // Auto-trigger comparison
+        setTimeout(() => {
+          handleCompareWithStates(preSelectedStates);
+        }, 500);
+      }
+      else if (preSelectedState) {
+        if (compareType === 'states') {
+          setComparisonMode('states');
+          setSelectedStates([preSelectedState]);
+        } else {
+          setComparisonMode('districts');
+          setSelectedState(preSelectedState);
+        }
+      }
+    };
+
+    handlePreSelection();
+  }, [location.state]);
+
   useEffect(() => {
     if (comparisonMode === 'districts' && selectedState) {
       fetchDistricts(selectedState);
@@ -269,119 +372,152 @@ const Compare = () => {
       return;
     }
 
+    if (comparisonMode === 'districts') {
+      await handleCompareWithDistricts(selectedDistricts);
+    } else if (comparisonMode === 'states') {
+      await handleCompareWithStates(selectedStates);
+    } else if (comparisonMode === 'years') {
+      await handleCompareWithYears(selectedYears, yearComparisonDistrict);
+    }
+  };
+
+  // NEW: Separate comparison handlers
+  const handleCompareWithDistricts = async (districts) => {
     try {
       setLoading(true);
       setError(null);
 
-      if (comparisonMode === 'districts') {
-        const dataPromises = selectedDistricts.map(district =>
-          apiService.getDistrictData(district.districtCode)
-        );
-        const responses = await Promise.all(dataPromises);
+      const dataPromises = districts.map(district =>
+        apiService.getDistrictData(district.districtCode)
+      );
+      const responses = await Promise.all(dataPromises);
+      
+      const comparison = responses.map((response, index) => {
+        const records = response.data?.records || [];
+        const latest = records[0] || {};
         
-        const comparison = responses.map((response, index) => {
-          const records = response.data?.records || [];
-          const latest = records[0] || {};
-          
-          const totalHouseholds = records.reduce((sum, r) => sum + Number(r.totalHouseholdsWorked || 0), 0);
-          const totalExpenditure = records.reduce((sum, r) => sum + Number(r.totalExpenditure || 0), 0);
-          const avgWage = records.length > 0 ? records.reduce((sum, r) => sum + (r.avgWageRate || 0), 0) / records.length : 0;
-          const totalWorks = records.reduce((sum, r) => sum + Number(r.totalWorksCompleted || 0), 0);
-          const avgDays = records.length > 0 ? records.reduce((sum, r) => sum + (r.avgDaysEmployment || 0), 0) / records.length : 0;
+        const totalHouseholds = records.reduce((sum, r) => sum + Number(r.totalHouseholdsWorked || 0), 0);
+        const totalExpenditure = records.reduce((sum, r) => sum + Number(r.totalExpenditure || 0), 0);
+        const avgWage = records.length > 0 ? records.reduce((sum, r) => sum + (r.avgWageRate || 0), 0) / records.length : 0;
+        const totalWorks = records.reduce((sum, r) => sum + Number(r.totalWorksCompleted || 0), 0);
+        const avgDays = records.length > 0 ? records.reduce((sum, r) => sum + (r.avgDaysEmployment || 0), 0) / records.length : 0;
 
-          return {
-            name: selectedDistricts[index].districtName,
-            households: totalHouseholds,
-            avgDays: Math.round(avgDays * 10) / 10,
-            expenditure: totalExpenditure,
-            avgWage: Math.round(avgWage),
-            worksCompleted: totalWorks,
-            performanceScore: calculatePerformanceScore(latest),
-          };
-        });
+        return {
+          name: districts[index].districtName,
+          households: totalHouseholds,
+          avgDays: Math.round(avgDays * 10) / 10,
+          expenditure: totalExpenditure,
+          avgWage: Math.round(avgWage),
+          worksCompleted: totalWorks,
+          performanceScore: calculatePerformanceScore(latest),
+        };
+      });
 
-        setComparisonData(comparison);
-      } else if (comparisonMode === 'states') {
-        const dataPromises = selectedStates.map(async (stateName) => {
-          const districtsResponse = await apiService.getDistrictsByState(stateName);
-          const stateDistricts = districtsResponse.data || [];
-          
-          const districtDataPromises = stateDistricts.slice(0, 10).map(d =>
-            apiService.getDistrictData(d.districtCode).catch(() => ({ data: { records: [] } }))
-          );
-          const districtResponses = await Promise.all(districtDataPromises);
-          
-          let totalHouseholds = 0;
-          let totalExpenditure = 0;
-          let totalWage = 0;
-          let totalWorks = 0;
-          let totalDays = 0;
-          let recordCount = 0;
-          let scoreCount = 0;
-          let totalScore = 0;
-          
-          districtResponses.forEach(response => {
-            const records = response.data?.records || [];
-            records.forEach(r => {
-              totalHouseholds += Number(r.totalHouseholdsWorked || 0);
-              totalExpenditure += Number(r.totalExpenditure || 0);
-              totalWage += Number(r.avgWageRate || 0);
-              totalWorks += Number(r.totalWorksCompleted || 0);
-              totalDays += Number(r.avgDaysEmployment || 0);
-              recordCount++;
-              
-              const score = calculatePerformanceScore(r);
-              if (score > 0) {
-                totalScore += score;
-                scoreCount++;
-              }
-            });
-          });
-          
-          return {
-            name: stateName,
-            households: totalHouseholds,
-            avgDays: recordCount > 0 ? Math.round((totalDays / recordCount) * 10) / 10 : 0,
-            expenditure: totalExpenditure,
-            avgWage: recordCount > 0 ? Math.round(totalWage / recordCount) : 0,
-            worksCompleted: totalWorks,
-            performanceScore: scoreCount > 0 ? Math.round(totalScore / scoreCount) : 0,
-          };
-        });
-        
-        const comparison = await Promise.all(dataPromises);
-        setComparisonData(comparison);
-      } else if (comparisonMode === 'years') {
-        const dataPromises = selectedYears.map(year =>
-          apiService.getDistrictData(yearComparisonDistrict.districtCode, year)
-        );
-        const responses = await Promise.all(dataPromises);
-        
-        const comparison = responses.map((response, index) => {
-          const records = response.data?.records || [];
-          const latest = records[0] || {};
-          
-          const totalHouseholds = records.reduce((sum, r) => sum + Number(r.totalHouseholdsWorked || 0), 0);
-          const totalExpenditure = records.reduce((sum, r) => sum + Number(r.totalExpenditure || 0), 0);
-          const avgWage = records.length > 0 ? records.reduce((sum, r) => sum + (r.avgWageRate || 0), 0) / records.length : 0;
-          const totalWorks = records.reduce((sum, r) => sum + Number(r.totalWorksCompleted || 0), 0);
-          const avgDays = records.length > 0 ? records.reduce((sum, r) => sum + (r.avgDaysEmployment || 0), 0) / records.length : 0;
-
-          return {
-            name: selectedYears[index],
-            households: totalHouseholds,
-            avgDays: Math.round(avgDays * 10) / 10,
-            expenditure: totalExpenditure,
-            avgWage: Math.round(avgWage),
-            worksCompleted: totalWorks,
-            performanceScore: calculatePerformanceScore(latest),
-          };
-        });
-
-        setComparisonData(comparison);
-      }
+      setComparisonData(comparison);
     } catch (err) {
       console.error('Comparison error:', err);
+      setError(err.message || 'Failed to fetch comparison data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCompareWithStates = async (stateNames) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const dataPromises = stateNames.map(async (stateName) => {
+        const districtsResponse = await apiService.getDistrictsByState(stateName);
+        const stateDistricts = districtsResponse.data || [];
+        
+        const districtDataPromises = stateDistricts.slice(0, 10).map(d =>
+          apiService.getDistrictData(d.districtCode).catch(() => ({ data: { records: [] } }))
+        );
+        const districtResponses = await Promise.all(districtDataPromises);
+        
+        let totalHouseholds = 0;
+        let totalExpenditure = 0;
+        let totalWage = 0;
+        let totalWorks = 0;
+        let totalDays = 0;
+        let recordCount = 0;
+        let scoreCount = 0;
+        let totalScore = 0;
+        
+        districtResponses.forEach(response => {
+          const records = response.data?.records || [];
+          records.forEach(r => {
+            totalHouseholds += Number(r.totalHouseholdsWorked || 0);
+            totalExpenditure += Number(r.totalExpenditure || 0);
+            totalWage += Number(r.avgWageRate || 0);
+            totalWorks += Number(r.totalWorksCompleted || 0);
+            totalDays += Number(r.avgDaysEmployment || 0);
+            recordCount++;
+            
+            const score = calculatePerformanceScore(r);
+            if (score > 0) {
+              totalScore += score;
+              scoreCount++;
+            }
+          });
+        });
+        
+        return {
+          name: stateName,
+          households: totalHouseholds,
+          avgDays: recordCount > 0 ? Math.round((totalDays / recordCount) * 10) / 10 : 0,
+          expenditure: totalExpenditure,
+          avgWage: recordCount > 0 ? Math.round(totalWage / recordCount) : 0,
+          worksCompleted: totalWorks,
+          performanceScore: scoreCount > 0 ? Math.round(totalScore / scoreCount) : 0,
+        };
+      });
+      
+      const comparison = await Promise.all(dataPromises);
+      setComparisonData(comparison);
+    } catch (err) {
+      console.error('State comparison error:', err);
+      setError(err.message || 'Failed to fetch comparison data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCompareWithYears = async (years, district) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const dataPromises = years.map(year =>
+        apiService.getDistrictData(district.districtCode, year)
+      );
+      const responses = await Promise.all(dataPromises);
+      
+      const comparison = responses.map((response, index) => {
+        const records = response.data?.records || [];
+        const latest = records[0] || {};
+        
+        const totalHouseholds = records.reduce((sum, r) => sum + Number(r.totalHouseholdsWorked || 0), 0);
+        const totalExpenditure = records.reduce((sum, r) => sum + Number(r.totalExpenditure || 0), 0);
+        const avgWage = records.length > 0 ? records.reduce((sum, r) => sum + (r.avgWageRate || 0), 0) / records.length : 0;
+        const totalWorks = records.reduce((sum, r) => sum + Number(r.totalWorksCompleted || 0), 0);
+        const avgDays = records.length > 0 ? records.reduce((sum, r) => sum + (r.avgDaysEmployment || 0), 0) / records.length : 0;
+
+        return {
+          name: years[index],
+          households: totalHouseholds,
+          avgDays: Math.round(avgDays * 10) / 10,
+          expenditure: totalExpenditure,
+          avgWage: Math.round(avgWage),
+          worksCompleted: totalWorks,
+          performanceScore: calculatePerformanceScore(latest),
+        };
+      });
+
+      setComparisonData(comparison);
+    } catch (err) {
+      console.error('Year comparison error:', err);
       setError(err.message || 'Failed to fetch comparison data');
     } finally {
       setLoading(false);
@@ -666,7 +802,7 @@ const Compare = () => {
           </motion.div>
         </div>
 
-        {/* Mode Tabs - WITHOUT Graph/Table Toggle */}
+        {/* Mode Tabs */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -691,13 +827,6 @@ const Compare = () => {
               </motion.button>
             ))}
           </div>
-          {/* <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 text-center">
-            <p className="text-sm text-orange-800 font-medium">
-              {comparisonMode === 'districts' && t.districtMode}
-              {comparisonMode === 'states' && t.stateMode}
-              {comparisonMode === 'years' && t.yearMode}
-            </p>
-          </div> */}
         </motion.div>
 
         {/* Error & Loading */}
@@ -1080,7 +1209,7 @@ const Compare = () => {
           )}
         </AnimatePresence>
 
-        {/* Results - WITH Graph Toggle in relevant section */}
+        {/* Results */}
         <AnimatePresence>
           {!loading && comparisonData.length > 0 && (
             <motion.div
@@ -1427,6 +1556,5 @@ const Compare = () => {
     </div>
   );
 };
-
 
 export default Compare;

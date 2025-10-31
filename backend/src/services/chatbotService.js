@@ -116,51 +116,146 @@ Please provide a clear, well-formatted response using markdown formatting.`;
       try {
         const states = await dataService.getStates();
         
-        // Extract multiple locations from the message
-        const mentionedStates = [];
+        // STEP 1: Find ALL districts from ALL states first
+        console.log('🔍 Searching for districts in message:', message);
         
+        const allDistrictsMap = new Map(); // districtCode -> {district, state}
+        
+        // Fetch all districts from all states
         for (const state of states) {
-          // Check for direct matches or fuzzy matches
-          const stateNameLower = state.stateName.toLowerCase();
-          
-          // Try exact word match first
-          const words = message.split(/\s+/);
-          for (const word of words) {
-            if (word.length < 3) continue;
-            
-            const similarity = this.fuzzyMatch(word, stateNameLower, 0.5); // Lower threshold for typos
-            if (similarity > 0.5) {
-              mentionedStates.push(state);
-              break;
+          try {
+            const districts = await dataService.getDistrictsByState(state.stateName);
+            for (const district of districts) {
+              allDistrictsMap.set(district.districtCode, {
+                ...district,
+                stateName: state.stateName
+              });
             }
-          }
-          
-          // Also try full state name match
-          if (message.includes(stateNameLower) || 
-              this.fuzzyMatch(message, stateNameLower, 0.6) > 0.6) {
-            if (!mentionedStates.find(s => s.stateName === state.stateName)) {
-              mentionedStates.push(state);
-            }
+          } catch (error) {
+            continue;
           }
         }
         
-        // If we found 2 or more states with compare intent, navigate to compare page
-        if (mentionedStates.length >= 2) {
+        console.log(`📍 Total districts loaded: ${allDistrictsMap.size}`);
+        
+        // STEP 2: Find EXACT matches first (highest priority)
+        const exactMatches = [];
+        
+        for (const [code, districtInfo] of allDistrictsMap) {
+          const districtNameLower = districtInfo.districtName.toLowerCase();
+          
+          // Check if the EXACT district name appears as a word in the message
+          // Use word boundaries to avoid partial matches
+          const regex = new RegExp(`\\b${districtNameLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+          
+          if (regex.test(message)) {
+            exactMatches.push(districtInfo);
+            console.log(`✓ EXACT match found: ${districtInfo.districtName}`);
+          }
+        }
+        
+        // If we found EXACTLY what user typed, use only those
+        if (exactMatches.length >= 2) {
+          console.log(`✅ Returning ${exactMatches.length} exact matches`);
           return {
             type: 'navigate',
             target: 'compare',
-            states: mentionedStates,
-            confidence: 0.95
+            compareType: 'districts',
+            districts: exactMatches,
+            confidence: 1.0
           };
         }
         
-        // If we found 1 state with compare intent, still go to compare page
-        if (mentionedStates.length === 1) {
+        if (exactMatches.length === 1) {
+          console.log(`✅ Returning 1 exact match for pre-selection`);
           return {
             type: 'navigate',
             target: 'compare',
-            state: mentionedStates[0],
+            compareType: 'districts',
+            district: exactMatches[0],
+            confidence: 1.0
+          };
+        }
+        
+        // STEP 3: Only if NO exact matches, try fuzzy matching (with very high threshold)
+        console.log('⚠️ No exact matches, trying fuzzy matching...');
+        
+        const fuzzyMatches = [];
+        const words = message.split(/\s+/).filter(w => w.length >= 4);
+        
+        for (const [code, districtInfo] of allDistrictsMap) {
+          const districtNameLower = districtInfo.districtName.toLowerCase();
+          
+          for (const word of words) {
+            // Only accept VERY close fuzzy matches (95%+ similarity)
+            const similarity = this.fuzzyMatch(word, districtNameLower, 0.95);
+            
+            if (similarity >= 0.95) {
+              fuzzyMatches.push({ district: districtInfo, similarity });
+              console.log(`~ Fuzzy match: ${districtInfo.districtName} (${(similarity * 100).toFixed(1)}%)`);
+              break;
+            }
+          }
+        }
+        
+        // Sort by similarity and take top matches
+        fuzzyMatches.sort((a, b) => b.similarity - a.similarity);
+        const topFuzzyMatches = fuzzyMatches.slice(0, 3).map(m => m.district);
+        
+        if (topFuzzyMatches.length >= 2) {
+          console.log(`⚠️ Returning ${topFuzzyMatches.length} fuzzy matches`);
+          return {
+            type: 'navigate',
+            target: 'compare',
+            compareType: 'districts',
+            districts: topFuzzyMatches,
             confidence: 0.85
+          };
+        }
+        
+        if (topFuzzyMatches.length === 1) {
+          return {
+            type: 'navigate',
+            target: 'compare',
+            compareType: 'districts',
+            district: topFuzzyMatches[0],
+            confidence: 0.85
+          };
+        }
+        
+        // FALLBACK: Try state comparison if no district matches
+        console.log('⚠️ No district matches, checking states...');
+        
+        const exactStateMatches = [];
+        
+        for (const state of states) {
+          const stateNameLower = state.stateName.toLowerCase();
+          const regex = new RegExp(`\\b${stateNameLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+          
+          if (regex.test(message)) {
+            exactStateMatches.push(state);
+            console.log(`✓ EXACT state match: ${state.stateName}`);
+          }
+        }
+        
+        if (exactStateMatches.length >= 2) {
+          console.log(`✅ Returning ${exactStateMatches.length} state matches`);
+          return {
+            type: 'navigate',
+            target: 'compare',
+            compareType: 'states',
+            states: exactStateMatches,
+            confidence: 1.0
+          };
+        }
+        
+        if (exactStateMatches.length === 1) {
+          return {
+            type: 'navigate',
+            target: 'compare',
+            compareType: 'states',
+            state: exactStateMatches[0],
+            confidence: 1.0
           };
         }
         
@@ -172,6 +267,9 @@ Please provide a clear, well-formatted response using markdown formatting.`;
             confidence: 0.95
           };
         }
+        
+        console.log('❌ No matches found');
+        
       } catch (error) {
         console.error('Comparison detection error:', error);
       }
@@ -359,5 +457,6 @@ Keep it brief and actionable. Use bullet points with * for formatting.`;
     }
   }
 }
+
 
 export default new ChatbotService();

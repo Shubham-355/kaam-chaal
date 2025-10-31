@@ -228,18 +228,28 @@ const Chatbot = () => {
     // Show a smart navigating message based on action
     let navigatingMessage = '';
     
-    if (action.target === 'compare' && action.states && action.states.length >= 2) {
-      navigatingMessage = language === 'en' 
-        ? `🚀 Taking you to compare ${action.states.map(s => s.stateName).join(' and ')}...` 
-        : `🚀 ${action.states.map(s => s.stateName).join(' और ')} की तुलना के लिए ले जा रहे हैं...`;
-    } else if (action.target === 'compare' && action.state) {
-      navigatingMessage = language === 'en' 
-        ? `🚀 Taking you to comparison tool with ${action.state.stateName} pre-selected...` 
-        : `🚀 ${action.state.stateName} पूर्व-चयनित के साथ तुलना टूल पर ले जा रहे हैं...`;
-    } else if (action.target === 'compare') {
-      navigatingMessage = language === 'en' 
-        ? `🚀 Opening comparison tool...` 
-        : `🚀 तुलना टूल खोल रहे हैं...`;
+    if (action.target === 'compare') {
+      if (action.compareType === 'districts' && action.districts && action.districts.length >= 2) {
+        navigatingMessage = language === 'en' 
+          ? `🚀 Comparing ${action.districts.map(d => d.districtName).join(' and ')}...` 
+          : `🚀 ${action.districts.map(d => d.districtName).join(' और ')} की तुलना कर रहे हैं...`;
+      } else if (action.compareType === 'districts' && action.district) {
+        navigatingMessage = language === 'en' 
+          ? `🚀 Taking you to compare ${action.district.districtName}...` 
+          : `🚀 ${action.district.districtName} की तुलना के लिए ले जा रहे हैं...`;
+      } else if (action.compareType === 'states' && action.states && action.states.length >= 2) {
+        navigatingMessage = language === 'en' 
+          ? `🚀 Comparing ${action.states.map(s => s.stateName).join(' and ')}...` 
+          : `🚀 ${action.states.map(s => s.stateName).join(' और ')} की तुलना कर रहे हैं...`;
+      } else if (action.compareType === 'states' && action.state) {
+        navigatingMessage = language === 'en' 
+          ? `🚀 Taking you to comparison tool with ${action.state.stateName} pre-selected...` 
+          : `🚀 ${action.state.stateName} पूर्व-चयनित के साथ तुलना टूल पर ले जा रहे हैं...`;
+      } else {
+        navigatingMessage = language === 'en' 
+          ? `🚀 Opening comparison tool...` 
+          : `🚀 तुलना टूल खोल रहे हैं...`;
+      }
     } else if (action.target === 'district' && action.district) {
       navigatingMessage = language === 'en' 
         ? `🚀 Opening ${action.district.districtName} dashboard...` 
@@ -275,15 +285,47 @@ const Chatbot = () => {
       switch (action.type) {
         case 'navigate':
           if (action.target === 'compare') {
-            // Navigate to compare page
-            if (action.states && action.states.length >= 2) {
-              navigate('/compare', { state: { preSelectedStates: action.states.map(s => s.stateName) } });
-            } else if (action.state) {
-              navigate('/compare', { state: { preSelectedState: action.state.stateName } });
-            } else {
-              navigate('/compare');
+            // Handle district comparison
+            if (action.compareType === 'districts' && action.districts && action.districts.length >= 2) {
+              navigate('/compare', { 
+                state: { 
+                  preSelectedDistricts: action.districts,
+                  compareType: 'districts'
+                } 
+              });
+              setIsOpen(false);
+            } else if (action.compareType === 'districts' && action.district) {
+              navigate('/compare', { 
+                state: { 
+                  preSelectedDistrict: action.district,
+                  compareType: 'districts'
+                } 
+              });
+              setIsOpen(false);
             }
-            setIsOpen(false);
+            // Handle state comparison
+            else if (action.compareType === 'states' && action.states && action.states.length >= 2) {
+              navigate('/compare', { 
+                state: { 
+                  preSelectedStates: action.states.map(s => s.stateName),
+                  compareType: 'states'
+                } 
+              });
+              setIsOpen(false);
+            } else if (action.compareType === 'states' && action.state) {
+              navigate('/compare', { 
+                state: { 
+                  preSelectedState: action.state.stateName,
+                  compareType: 'states'
+                } 
+              });
+              setIsOpen(false);
+            }
+            // Generic compare page
+            else {
+              navigate('/compare');
+              setIsOpen(false);
+            }
           } else if (action.target === 'district' && action.district) {
             setSelectedDistrict(action.district);
             navigate('/dashboard');
