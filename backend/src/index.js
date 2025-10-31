@@ -27,6 +27,7 @@ app.use(rateLimiter);
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  console.log('Health check requested');
 });
 
 // Routes

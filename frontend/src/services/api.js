@@ -103,6 +103,21 @@ export const apiService = {
     const response = await api.post('/chatbot/help', { context });
     return response.data;
   },
+
+  // Health check to warm up the backend (prevent cold start)
+  async healthCheck() {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/health`, {
+        timeout: 5000 // Short timeout, don't wait too long
+      });
+      console.log('Backend health check successful');
+      return response.data;
+    } catch (error) {
+      console.warn('Backend health check failed (cold start may occur):', error.message);
+      // Don't throw error, just log it
+      return null;
+    }
+  },
 };
 
 export default api;

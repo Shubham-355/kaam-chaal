@@ -76,6 +76,19 @@ const Home = () => {
   const t = translations[language];
 
   useEffect(() => {
+    const warmUpBackend = async () => {
+      try {
+        await apiService.healthCheck();
+      } catch (error) {
+        // Silently fail, don't block user interaction
+        console.warn('Failed to warm up backend:', error);
+      }
+    };
+
+    warmUpBackend();
+  }, []);
+
+  useEffect(() => {
     let isMounted = true;
     
     const fetchStates = async () => {
